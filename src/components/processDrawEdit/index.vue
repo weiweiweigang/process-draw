@@ -2,14 +2,23 @@
  * @Author: Strayer
  * @Date: 2025-04-15
  * @LastEditors: Strayer
- * @LastEditTime: 2025-04-15
+ * @LastEditTime: 2025-04-16
  * @Description: 
  * @FilePath: \processDraw\src\components\processDrawEdit\index.vue
 -->
 
 <template>
   <div class="demo">
-    <div :ondrop="dropHandle" :ondragover="(e: any) => e.preventDefault()" style="border: 1px solid #ff0;">
+    <div style="position: absolute; top: 10px; right: 10px;">
+      <button @click="createLine(canvas!);">画实线</button>
+      <button @click="createLine(canvas!, { lineDash: [4, 4] })">画虚线</button>
+
+    </div>
+    <div 
+      :ondrop="(e: any) => imgDropHandle(canvas!, e)" 
+      :ondragover="(e: any) => e.preventDefault()" 
+      style="border: 1px solid #ff0;"
+    >
       <canvas
         id="container"
         style="
@@ -24,76 +33,40 @@
 <script setup lang="ts">
 import { Renderer } from '@antv/g-canvas';
 import { Canvas, Image, FederatedEvent } from '@antv/g';
-import { onMounted } from 'vue';
-import { addNode1, addNode2, addLine, addWheel, moveCamera } from './';
+import { onMounted, shallowRef } from 'vue';
+import { addNode1, addNode2, addLine, addWheel, moveCamera,  } from './';
 import interact from 'interactjs';
-import { createImgEntity, addDragToImgGroup } from './comm';
+import { createImgEntity, imgDropHandle, createLine } from './comm';
 
 import IconPanel  from './iconPanel.vue';
-import { initData, moveCameraWhenDrag } from './data';
+import { initData, moveCameraWhenDrag, panelData } from './data';
 
 onMounted(() => {
   initData();
   initCanvas();
 })
 
-function dropHandle(event:any) {
-  // layerX
-  console.log('%c [ event ]-41', 'font-size:13px; background:#0b8fcd; color:#4fd3ff;', event);
-  event.preventDefault();
-  const data = event.dataTransfer.getData('Text');
-  console.log('%c [ data ]-43', 'font-size:13px; background:#7529a8; color:#b96dec;', data);
-}
+const canvas = shallowRef<Canvas>()
 
 async function  initCanvas() {
-  // TODO:实例化渲染器和画布
+  // 实例化渲染器和画布
   const renderer = new Renderer();
   const dom = document.getElementById('container')!;
-  const canvas = new Canvas({
+  canvas.value = new Canvas({
     canvas: dom as any, // DOM 节点id
     renderer,
   });
 
-  await canvas.ready;
+  await canvas.value.ready;
 
-  // TODO:添加节点和边
-  const node1 = addNode1();
-  const edge = addLine();
-  const node2 = addNode2();
-  canvas.appendChild(node1);
-  canvas.appendChild(node2);
-  canvas.appendChild(edge);
+  // 使用鼠标滚轮实现相机缩放
+  addWheel(canvas.value);
 
-//   node1.addEventListener(
-//     'click',
-//     (e: FederatedEvent) => {
-//         console.log(node1.getPosition()); // e.CAPTURING_PHASE
-//         console.log(node1.getLocalTransform()); // e.CAPTURING_PHASE
+  // 使用 hammer.js 实现相机移动
+  moveCamera(canvas.value);
 
-//     },
-//     { capture: true },
-// );
-
-  const imageEntity = createImgEntity(canvas, {
-    x: 600,
-    y: 200,
-    width: 200,
-    height: 200,
-    src: '/static/processDrawEdit/njsg.png',
-  })
-
-  canvas.appendChild(imageEntity);
-
-  // TODO:使用 interact.js 实现节点拖拽
-  addDragToImgGroup(canvas, node1);
-  addDragToImgGroup(canvas, node2);
-
-  // TODO:使用鼠标滚轮实现相机缩放
-  addWheel(canvas);
-
-  // TODO: 使用 hammer.js 实现相机移动
-  moveCamera(canvas);
-  
+  // console.log('%c [ canvas.getCamera().getPosition() ]-110', 'font-size:13px; background:#3d6a2b; color:#81ae6f;', canvas.getCamera().getPosition());
+  // console.log(canvas.getConfig().width)
 }
 </script>
 

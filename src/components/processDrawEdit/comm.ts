@@ -6,9 +6,10 @@
  * @Description: 
  * @FilePath: \processDraw\src\components\processDrawEdit\comm.ts
  */
-import { Canvas, Group, Image, Rect, type ImageStyleProps } from '@antv/g';
+import { Canvas, Group, Image, Polyline, Rect, type ImageStyleProps } from '@antv/g';
 import interact from 'interactjs';
-import { moveCameraWhenDrag } from './data';
+import { isCreateLine, moveCameraWhenDrag, panelData } from './data';
+import { v4 as uuidv4 } from 'uuid';
 
 /**
  * @description: 给图片元素添加鼠标移入高亮
@@ -55,7 +56,6 @@ export function addDragToImgGroup(canvas: Canvas, el: any) {
       moveCameraWhenDrag.value = false;
     },
     onmove: function (event) {
-      console.log('%c [ event ]-56', 'font-size:13px; background:#954c7b; color:#d990bf;', event);
       // interact.js 告诉我们的偏移量
       const { dx, dy } = event;
       const zoom = camera.getZoom();
@@ -88,6 +88,10 @@ export  function createImgEntity(canvas: Canvas, param: {
   width: number,
   height: number,
 }) {
+  const paddingPx = 8;
+  const width = param.width + paddingPx * 2;
+  const height = param.height + paddingPx * 2;
+
   const group = new Group({
     name: 'imgBox',
     className: 'imgBox',
@@ -98,15 +102,15 @@ export  function createImgEntity(canvas: Canvas, param: {
     }
   });
   group.setPosition(param.x, param.y);
-  group.translate(-param.width/2, -param.height/2)
+  group.translate(-width/2, -height/2)
 
   // 用矩形做高亮的边框
   const box = new Rect({
     name: 'imgBox__Rect',
     className: 'imgBox__Rect',
     style: {
-      width: param.width,
-      height: param.height,
+      width: width,
+      height: height,
     }
   })
   group.appendChild(box);
@@ -120,6 +124,7 @@ export  function createImgEntity(canvas: Canvas, param: {
       src: param.src,
     },
   });
+  imageEntity.translateLocal(paddingPx, paddingPx)
   group.appendChild(imageEntity);
   
   // 高亮
@@ -131,4 +136,105 @@ export  function createImgEntity(canvas: Canvas, param: {
   addDragToImgGroup(canvas, group)
 
   return group;
+}
+
+/**
+ * @description: 拓扑元件过来新增
+ */
+export function imgDropHandle(canvas: Canvas, event:any) {
+  event.preventDefault();
+  
+  const data = event.dataTransfer.getData('Text');
+  const item = panelData.value.find(item => item.key === data);
+  console.log('%c [ item ]-160', 'font-size:13px; background:#000; color:#fdffcd;', item);
+  if(item) {
+    const point = client2Canvas(canvas, [event.clientX, event.clientY])
+
+    createImgEntity(canvas, {
+      x: point.x,
+      y: point.y,
+      width: item.width,
+      height: item.height,
+      src: '/static/processDrawEdit/'+item.img,
+    })
+  }
+}
+
+/**
+ * @description: 把输入的屏幕坐标转换为画布坐标
+ */
+export function client2Canvas(canvas: Canvas, clientPoint: [number, number]) {
+  // - 计算当前点坐标
+  const point = canvas.client2Viewport({ x: clientPoint[0], y: clientPoint[1]});
+  // -  计算当前点和画布中心点的距离，
+  const distance = {
+    x: (point.x - canvas.getConfig().width! / 2),
+    y: (point.y - canvas.getConfig().height! / 2),
+  }
+  // 再把距离除以缩放比例，
+  distance.x /= canvas.getCamera().getZoom();
+  distance.y /= canvas.getCamera().getZoom();
+  // - 该距离加上相机的移动距离
+  distance.x += canvas.getCamera().getPosition()[0];
+  distance.y += canvas.getCamera().getPosition()[1];
+
+  return distance
+}
+
+/**
+ * @description: 绘制管道
+ * 鼠标左键点击一下记下一个点的坐标，鼠标双击完成绘制
+ */
+export function createLine(canvas: Canvas, style?: any) {
+  if(isCreateLine.value) return;
+  isCreateLine.value = true;
+  let lineCoords: [number, number][] = [];
+
+  const polyline = new Polyline({
+    id: uuidv4(),
+    name: 'line',
+    class: 'line',
+    style: {
+      points: JSON.parse(JSON.stringify(lineCoords)),
+      stroke: '#1890FF',
+      lineWidth: 10,
+      cursor: 'pointer',
+      // lineDash: [4, 4],
+      ...style,
+    },
+  });
+  console.log('polyline.id:', polyline.id)
+
+  // 鼠标左键点击一下记下一个点的坐标，鼠标双击完成绘制
+  let perTapTime = new Date();
+  const clickHandle = (event: any) => {
+    console.log('click')
+    // 计算坐标
+    const point = client2Canvas(canvas, [event.clientX, event.clientY])
+    lineCoords.push([point.x, point.y]);
+    polyline.style.points = JSON.parse(JSON.stringify(lineCoords));
+
+    if(lineCoords.length === 1) {
+      canvas.appendChild(polyline);
+      addDragToImgGroup(canvas, polyline)
+    }
+
+    // 两次点击的时间少于500ms判断为双击
+    const nowTapTime = new Date();
+    if(nowTapTime.getTime() - perTapTime.getTime() < 300) {
+      isCreateLine.value = false;
+      canvas.removeEventListener('click', clickHandle);
+      canvas.removeEventListener('mousemove', hoverHandle);
+    }
+    perTapTime = nowTapTime;
+  };
+  canvas.addEventListener('click', clickHandle);
+
+  // 鼠标悬浮移动时 线的终点跟随移动
+  const hoverHandle = (event: any) => {
+    // 计算坐标
+    const point = client2Canvas(canvas, [event.clientX, event.clientY])
+    polyline.style.points = JSON.parse(JSON.stringify([...lineCoords, [point.x, point.y]]));
+  }
+  canvas.addEventListener('mousemove', hoverHandle);
 }

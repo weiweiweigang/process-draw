@@ -8,7 +8,8 @@
  */
 import { Circle, Text, Line, Canvas } from '@antv/g';
 import Hammer from 'hammerjs';
-import { moveCameraWhenDrag } from './data';
+import { moveCameraWhenDrag, panelData } from './data';
+import { createImgEntity } from './comm';
 
 /**
  * @description: 添加节点
@@ -101,23 +102,13 @@ export function addWheel(canvas: Canvas) {
   // 设置最小和最大缩放比例
   const minZoom = 0;
   const maxZoom = Infinity;
-  canvas.addEventListener(
-    'wheel',
-    (e: any) => {
+  canvas.addEventListener('wheel', (e: any) => {
       e.preventDefault();
-      let zoom;
-      if (e.deltaY < 0) {
-        zoom = camera.getZoom()  / 0.95;
-      } else {
-        zoom = camera.getZoom() * 0.95;
-      }
-      zoom = Math.max(minZoom, Math.min(maxZoom, zoom))
 
-      // 设置相机缩放参数
+      let zoom = e.deltaY < 0? camera.getZoom()  / 0.95: camera.getZoom() * 0.95;
+      zoom = Math.max(minZoom, Math.min(maxZoom, zoom))
       camera.setZoom(zoom);
-    },
-    { passive: false }
-  );
+    }, { passive: false } );
 }
 
 /**
@@ -125,25 +116,20 @@ export function addWheel(canvas: Canvas) {
  */
 export function moveCamera(canvas: Canvas) {
   const camera = canvas.getCamera();
-
   const hammer = new Hammer(canvas as any);
+
   let preCoord = [0, 0];
   hammer.on('panstart', (ev) => {
     if(!moveCameraWhenDrag.value) return;
-
     preCoord = [ev.deltaX, ev.deltaY];
-    console.log('%c [ getZoom ]-161', 'font-size:13px; background:#7a969b; color:#bedadf;',  camera.getZoom());
-
   });
   hammer.on('pan', (ev) => {
     if(!moveCameraWhenDrag.value) return;
 
     // const zoom = Math.pow(2, camera.getZoom()-1); // 如果需要实现类似3d空间的近快远慢 用这个
     const zoom = camera.getZoom();
-
     camera.pan((-ev.deltaX + preCoord[0]) / zoom, (-ev.deltaY + preCoord[1]) / zoom);
     preCoord = [ev.deltaX, ev.deltaY];
-
   });
 
 }

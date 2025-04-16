@@ -2,7 +2,7 @@
  * @Author: Strayer
  * @Date: 2025-04-15
  * @LastEditors: Strayer
- * @LastEditTime: 2025-04-15
+ * @LastEditTime: 2025-04-16
  * @Description: 元件icon面板
  * @FilePath: \processDraw\src\components\processDrawEdit\iconPanel.vue
 -->
@@ -16,8 +16,10 @@
       draggable="true"
       :ondragstart="(event: any) => dragstart(event, item)"
     >
-      <img :src="`/static/processDrawEdit/${item.img}`" width="100%" />
-      <span class="label">{{ item.label }}</span>
+      <div>
+        <img :src="`/static/processDrawEdit/${item.img}`" :width="item.width>100? 100:item.width" />
+      </div>
+      <p class="label">{{ item.label }}</p>
     </div>
   </div>
 </template>
@@ -25,6 +27,7 @@
 <script setup lang="ts">
 import { shallowRef } from 'vue';
 import { panelData } from './data';
+import { createLine } from './comm';
 
 function  dragstart(event: any, item: any) {
   event.dataTransfer.setData('Text', item.key);  
@@ -38,13 +41,14 @@ function  dragstart(event: any, item: any) {
   top: 10px;
   left: 10px;
   border: 1px solid #f67;
-  width: 500px;
+  width: 350px;
   display: flex;
   flex-wrap: wrap; /* 添加此属性使flex元素可以换行 */
   gap: 8px;
 
   .iconItem {
-    width: 80px;
+    max-width: 100px;
+    text-align: center;
     .label {
       font-size: 12px;
       color: #666;
