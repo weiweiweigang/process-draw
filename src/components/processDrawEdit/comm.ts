@@ -6,9 +6,9 @@
  * @Description: 
  * @FilePath: \processDraw\src\components\processDrawEdit\comm.ts
  */
-import { Canvas, Group, Image, Polyline, Rect, type ImageStyleProps } from '@antv/g';
+import { Canvas, DisplayObject, ElementEvent, Group, HTML, Image, Polyline, Rect, type ImageStyleProps } from '@antv/g';
 import interact from 'interactjs';
-import { isCreateLine, moveCameraWhenDrag, panelData } from './data';
+import { disableDragDevice, isCreateLine, disableDragCamera, panelData } from './data';
 import { v4 as uuidv4 } from 'uuid';
 
 /**
@@ -52,10 +52,13 @@ export function addDragToImgGroup(canvas: Canvas, el: any) {
     context: canvas.document as any, // 传入上下文
   }).draggable({
     onstart: function (event) {
+      if(disableDragDevice.value) return;
       // 禁止画布移动
-      moveCameraWhenDrag.value = false;
+      disableDragCamera.value = true;
     },
     onmove: function (event) {
+      if(disableDragDevice.value) return;
+
       // interact.js 告诉我们的偏移量
       const { dx, dy } = event;
       const zoom = camera.getZoom();
@@ -69,13 +72,110 @@ export function addDragToImgGroup(canvas: Canvas, el: any) {
       // edge.style.y1 = ny;
     },
     onend: function (event) {
+      if(disableDragDevice.value) return;
+
       console.log('%c [ event ]-67', 'font-size:13px; background:#afb2d7; color:#f3f6ff;', event);
       // 恢复画布移动
       setTimeout(() => {
-        moveCameraWhenDrag.value = true;
+        disableDragCamera.value = false;
       }, 100);
       },
     });
+}
+
+/**
+ * @description: 给元素自定义右键菜单
+ */
+export function customContextMenu(canvas: Canvas, el: DisplayObject) {
+  el.addEventListener('rightup', (e: any) => {
+    console.log('%c [ e ]-91', 'font-size:13px; background:#ece48a; color:#ffffce;', e);
+    // // 阻止浏览器默认的右键菜单
+    // e.preventDefault();
+    // // 阻止事件传播
+    // e.stopPropagation();
+    console.log('%c [ el ]-90', 'font-size:13px; background:#f62979; color:#ff6dbd;', el.id);
+    
+    const point = client2Canvas(canvas, [e.clientX, e.clientY])
+
+    const innerHtml = `<div class="context-menu">
+        <div class="context-menu__item" data-action="edit">
+          <i class="context-menu__icon">✏️</i>编辑
+        </div>
+        <div class="context-menu__item" data-action="copy">
+          <i class="context-menu__icon">📋</i>复制
+        </div>
+        <div class="context-menu__item" data-action="delete">
+          <i class="context-menu__icon">🗑️</i>删除
+        </div>
+        <div class="context-menu__divider"></div>
+        <div class="context-menu__item" data-action="bringToFront">
+          <i class="context-menu__icon">⬆️</i>置于顶层
+        </div>
+        <div class="context-menu__item" data-action="sendToBack">
+          <i class="context-menu__icon">⬇️</i>置于底层
+        </div>
+      </div>`
+    
+    // 自定义右键菜单
+    const html = new HTML({
+        style: {
+            x: point.x,
+            y: point.y,
+            width: 100,
+            height: 100,
+            innerHTML: innerHtml,
+        },
+    });
+    canvas.appendChild(html);
+
+    setTimeout(() => {
+      console.log('%c [ document.querySelector(".context-menu") ]-133', 'font-size:13px; background:#52ca7d; color:#96ffc1;', document.querySelector('.context-menu'));
+
+      document.querySelector('.context-menu__item')?.addEventListener('click', (e: any) => {
+        console.log('%c [ e ]-133', 'font-size:13px; background:#3277e3; color:#76bbff;', e);
+
+      })
+    }, 200)
+
+
+    // html.addEventListener(ElementEvent.MOUNTED, () => {
+    //   const container = html.getContainer();
+    //   if (container) {
+    //     container.appendChild(styleElement);
+        
+    //     // 为菜单项添加点击事件
+    //     const menuItems = container.querySelectorAll('.context-menu__item');
+    //     menuItems.forEach(item => {
+    //       item.addEventListener('click', (event) => {
+    //         const action = (event.currentTarget as HTMLElement).dataset.action;
+            
+    //         switch (action) {
+    //           case 'delete':
+    //             if (el.parent) {
+    //               el.parent.removeChild(el);
+    //             }
+    //             break;
+    //           case 'edit':
+    //             console.log('编辑元素:', el.id);
+    //             break;
+    //           case 'copy':
+    //             console.log('复制元素:', el.id);
+    //             // 这里可以实现复制功能
+    //             break;
+    //           case 'bringToFront':
+    //             el.style.zIndex = 999;
+    //             break;
+    //           case 'sendToBack':
+    //             el.style.zIndex = 1;
+    //             break;
+    //         }
+            
+    //         closeMenu();
+    //       });
+    //     });
+    //   }
+    // })
+  })
 }
 
 /**
@@ -93,6 +193,7 @@ export  function createImgEntity(canvas: Canvas, param: {
   const height = param.height + paddingPx * 2;
 
   const group = new Group({
+    id: uuidv4(),
     name: 'imgBox',
     className: 'imgBox',
     style: {
@@ -135,6 +236,9 @@ export  function createImgEntity(canvas: Canvas, param: {
   // 拖拽, 已添加到画布时前提
   addDragToImgGroup(canvas, group)
 
+  // 自定义右键菜单
+  customContextMenu(canvas, group)
+
   return group;
 }
 
@@ -165,20 +269,21 @@ export function imgDropHandle(canvas: Canvas, event:any) {
  */
 export function client2Canvas(canvas: Canvas, clientPoint: [number, number]) {
   // - 计算当前点坐标
-  const point = canvas.client2Viewport({ x: clientPoint[0], y: clientPoint[1]});
+  let point = canvas.client2Viewport({ x: clientPoint[0], y: clientPoint[1]});
+  point =canvas.viewport2Canvas(point);
   // -  计算当前点和画布中心点的距离，
-  const distance = {
-    x: (point.x - canvas.getConfig().width! / 2),
-    y: (point.y - canvas.getConfig().height! / 2),
-  }
-  // 再把距离除以缩放比例，
-  distance.x /= canvas.getCamera().getZoom();
-  distance.y /= canvas.getCamera().getZoom();
-  // - 该距离加上相机的移动距离
-  distance.x += canvas.getCamera().getPosition()[0];
-  distance.y += canvas.getCamera().getPosition()[1];
+  // const distance = {
+  //   x: (point.x - canvas.getConfig().width! / 2),
+  //   y: (point.y - canvas.getConfig().height! / 2),
+  // }
+  // // 再把距离除以缩放比例，
+  // distance.x /= canvas.getCamera().getZoom();
+  // distance.y /= canvas.getCamera().getZoom();
+  // // - 该距离加上相机的移动距离
+  // distance.x += canvas.getCamera().getPosition()[0];
+  // distance.y += canvas.getCamera().getPosition()[1];
 
-  return distance
+  return point;
 }
 
 /**
@@ -188,6 +293,10 @@ export function client2Canvas(canvas: Canvas, clientPoint: [number, number]) {
 export function createLine(canvas: Canvas, style?: any) {
   if(isCreateLine.value) return;
   isCreateLine.value = true;
+
+  disableDragCamera.value = true;
+  disableDragDevice.value = true;
+
   let lineCoords: [number, number][] = [];
 
   const polyline = new Polyline({
@@ -216,7 +325,8 @@ export function createLine(canvas: Canvas, style?: any) {
 
     if(lineCoords.length === 1) {
       canvas.appendChild(polyline);
-      addDragToImgGroup(canvas, polyline)
+      addDragToImgGroup(canvas, polyline);
+      customContextMenu(canvas, polyline)
     }
 
     // 两次点击的时间少于500ms判断为双击
@@ -225,6 +335,8 @@ export function createLine(canvas: Canvas, style?: any) {
       isCreateLine.value = false;
       canvas.removeEventListener('click', clickHandle);
       canvas.removeEventListener('mousemove', hoverHandle);
+      disableDragCamera.value = false;
+      disableDragDevice.value = false;
     }
     perTapTime = nowTapTime;
   };

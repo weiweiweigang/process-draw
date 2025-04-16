@@ -8,7 +8,7 @@
  */
 import { Circle, Text, Line, Canvas } from '@antv/g';
 import Hammer from 'hammerjs';
-import { moveCameraWhenDrag, panelData } from './data';
+import { disableDragCamera, panelData } from './data';
 import { createImgEntity } from './comm';
 
 /**
@@ -106,8 +106,11 @@ export function addWheel(canvas: Canvas) {
       e.preventDefault();
 
       let zoom = e.deltaY < 0? camera.getZoom()  / 0.95: camera.getZoom() * 0.95;
-      zoom = Math.max(minZoom, Math.min(maxZoom, zoom))
-      camera.setZoom(zoom);
+      zoom = Math.max(minZoom, Math.min(maxZoom, zoom));
+
+      const { x, y } = canvas.client2Viewport({ x: e.clientX, y: e.clientY });
+
+      camera.setZoomByViewportPoint(zoom, [x, y])
     }, { passive: false } );
 }
 
@@ -120,11 +123,11 @@ export function moveCamera(canvas: Canvas) {
 
   let preCoord = [0, 0];
   hammer.on('panstart', (ev) => {
-    if(!moveCameraWhenDrag.value) return;
+    if(disableDragCamera.value) return;
     preCoord = [ev.deltaX, ev.deltaY];
   });
   hammer.on('pan', (ev) => {
-    if(!moveCameraWhenDrag.value) return;
+    if(disableDragCamera.value) return;
 
     // const zoom = Math.pow(2, camera.getZoom()-1); // 如果需要实现类似3d空间的近快远慢 用这个
     const zoom = camera.getZoom();

@@ -153,11 +153,15 @@ export const panelData = shallowRef([
   },
 ]);
 
-// 拖拽时允许移动相机
-export  const moveCameraWhenDrag = ref(true);
+// 是否禁止拖拽相机
+export  const disableDragCamera = ref(false);
 // 当前是否正在画管道
 export const isCreateLine = ref(false);
+// 是否禁止拖车所有元件和管道
+export const disableDragDevice = ref(false);
 
 export const initData = () => {
-  moveCameraWhenDrag.value = true;
+  disableDragCamera.value = false;
+  isCreateLine.value = false;
+  disableDragDevice.value = false;
 };
