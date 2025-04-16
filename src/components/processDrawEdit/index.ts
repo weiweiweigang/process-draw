@@ -2,7 +2,7 @@
  * @Author: Strayer
  * @Date: 2025-03-20
  * @LastEditors: Strayer
- * @LastEditTime: 2025-04-15
+ * @LastEditTime: 2025-04-16
  * @Description: 
  * @FilePath: \processDraw\src\components\processDrawEdit\index.ts
  */
@@ -23,20 +23,12 @@ export function addNode1() {
       lineWidth: 4, // 描边宽度
       zIndex: 3, // 层级
       cursor: 'pointer',
+      opacity: 0.5,
     },
   });
 
   // 我们只需要设置节点的位置，它的所有子节点（文本）也会跟着移动
   node1.setPosition(200, 200);
-
-  node1.addEventListener('mouseenter', () => {
-    // 修改图形样式属性
-    node1.style.fill = 'red';
-  });
-  node1.addEventListener('mouseleave', () => {
-    // 修改图形样式属性
-    node1.style.fill = '#1890FF';
-  });
 
   return node1;
 }
@@ -115,16 +107,11 @@ export function addWheel(canvas: Canvas) {
       e.preventDefault();
       let zoom;
       if (e.deltaY < 0) {
-        zoom = Math.max(
-          minZoom,
-          Math.min(maxZoom, camera.getZoom() / 0.95)
-        );
+        zoom = camera.getZoom()  / 0.95;
       } else {
-        zoom = Math.max(
-          minZoom,
-          Math.min(maxZoom, camera.getZoom() * 0.95)
-        );
+        zoom = camera.getZoom() * 0.95;
       }
+      zoom = Math.max(minZoom, Math.min(maxZoom, zoom))
 
       // 设置相机缩放参数
       camera.setZoom(zoom);
@@ -151,10 +138,8 @@ export function moveCamera(canvas: Canvas) {
   hammer.on('pan', (ev) => {
     if(!moveCameraWhenDrag.value) return;
 
-    // ev.deltaX/Y 为水平/垂直方向的偏移量
-    // 沿水平/垂直方向移动相机
-
-    const zoom = Math.pow(2, camera.getZoom()-1);
+    // const zoom = Math.pow(2, camera.getZoom()-1); // 如果需要实现类似3d空间的近快远慢 用这个
+    const zoom = camera.getZoom();
 
     camera.pan((-ev.deltaX + preCoord[0]) / zoom, (-ev.deltaY + preCoord[1]) / zoom);
     preCoord = [ev.deltaX, ev.deltaY];

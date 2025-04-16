@@ -9,23 +9,25 @@
 
 <template>
   <div class="demo">
-    <canvas
-      id="container"
-      style="
-        width: 100%;
-        height: 100%;
-"
-    />
+    <div :ondrop="dropHandle" :ondragover="(e: any) => e.preventDefault()" style="border: 1px solid #ff0;">
+      <canvas
+        id="container"
+        style="
+          width: 100%;
+          height: 100%;"
+      />
+    </div>
     <IconPanel />
   </div>
 </template>
 
 <script setup lang="ts">
 import { Renderer } from '@antv/g-canvas';
-import { Canvas, Image } from '@antv/g';
+import { Canvas, Image, FederatedEvent } from '@antv/g';
 import { onMounted } from 'vue';
 import { addNode1, addNode2, addLine, addWheel, moveCamera } from './';
 import interact from 'interactjs';
+import { createImgEntity, addDragToImgGroup } from './comm';
 
 import IconPanel  from './iconPanel.vue';
 import { initData, moveCameraWhenDrag } from './data';
@@ -34,6 +36,14 @@ onMounted(() => {
   initData();
   initCanvas();
 })
+
+function dropHandle(event:any) {
+  // layerX
+  console.log('%c [ event ]-41', 'font-size:13px; background:#0b8fcd; color:#4fd3ff;', event);
+  event.preventDefault();
+  const data = event.dataTransfer.getData('Text');
+  console.log('%c [ data ]-43', 'font-size:13px; background:#7529a8; color:#b96dec;', data);
+}
 
 async function  initCanvas() {
   // TODO:实例化渲染器和画布
@@ -49,51 +59,34 @@ async function  initCanvas() {
   // TODO:添加节点和边
   const node1 = addNode1();
   const edge = addLine();
+  const node2 = addNode2();
   canvas.appendChild(node1);
-  canvas.appendChild(addNode2());
+  canvas.appendChild(node2);
   canvas.appendChild(edge);
 
-  const image = new Image({
-    style: {
-      x: 300,
-      y: 300,
-      width: 200,
-      height: 200,
-      src: '/static/processDrawEdit/njsg.png',
-      cursor: 'pointer',
-      // pointerEvents: 'pixels',
-    },
-  });
-  canvas.appendChild(image);
+//   node1.addEventListener(
+//     'click',
+//     (e: FederatedEvent) => {
+//         console.log(node1.getPosition()); // e.CAPTURING_PHASE
+//         console.log(node1.getLocalTransform()); // e.CAPTURING_PHASE
+
+//     },
+//     { capture: true },
+// );
+
+  const imageEntity = createImgEntity(canvas, {
+    x: 600,
+    y: 200,
+    width: 200,
+    height: 200,
+    src: '/static/processDrawEdit/njsg.png',
+  })
+
+  canvas.appendChild(imageEntity);
 
   // TODO:使用 interact.js 实现节点拖拽
-  interact(node1 as any, {
-  // 直接传入节点1
-    context: canvas.document as any, // 传入上下文
-  }).draggable({
-    onstart: function (event) {
-      // 记录下初始位置
-      // node1.style.x0 = node1.getLocalPosition()[0];
-      // node1.style.y0 = node1.getLocalPosition()[1];
-      moveCameraWhenDrag.value = false;
-    },
-    onmove: function (event) {
-      // interact.js 告诉我们的偏移量
-      const { dx, dy } = event;
-      // 改变节点1位置
-      node1.translateLocal(dx, dy);
-      // 获取节点1位置
-      const [nx, ny] = node1.getLocalPosition();
-      // 改变边的端点位置
-      edge.style.x1 = nx;
-      edge.style.y1 = ny;
-    },
-    onend: function (event) {
-      setTimeout(() => {
-        moveCameraWhenDrag.value = true;
-      }, 100);
-    },
-  });
+  addDragToImgGroup(canvas, node1);
+  addDragToImgGroup(canvas, node2);
 
   // TODO:使用鼠标滚轮实现相机缩放
   addWheel(canvas);
