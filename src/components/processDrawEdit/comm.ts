@@ -6,7 +6,7 @@
  * @Description: 
  * @FilePath: \processDraw\src\components\processDrawEdit\comm.ts
  */
-import { Canvas, DisplayObject, ElementEvent, Group, HTML, Image, Path, Polyline, Rect, type ImageStyleProps } from '@antv/g';
+import { Canvas, Circle, DisplayObject, ElementEvent, Group, HTML, Image, Path, Polyline, Rect, type ImageStyleProps } from '@antv/g';
 import interact from 'interactjs';
 import { disableDragDevice, isCreateLine, disableDragCamera, panelData, type MenuDataItem } from './data';
 import { v4 as uuidv4 } from 'uuid';
@@ -170,6 +170,7 @@ function createImgEntity(canvas: Canvas, param: {
   });
   group.setPosition(param.x, param.y);
   group.translate(-width/2, -height/2)
+  group.setOrigin(width/2, height/2)
 
   // 用矩形做高亮的边框
   const box = new Rect({
@@ -216,16 +217,7 @@ function createImgEntity(canvas: Canvas, param: {
   addDragToImgGroup(canvas, group)
 
   // 添加旋转功能
-  const rotateImg = new Image({
-    name: 'imgBox__rotateImg',
-    className: 'imgBox__rotateImg',
-    style: {
-      width: 20,
-      height: 20,
-      src: 'data:image/svg+xml;base64,PCFET0NUWVBFIHN2ZyBQVUJMSUMgIi0vL1czQy8vRFREIFNWRyAxLjEvL0VOIiAiaHR0cDovL3d3dy53My5vcmcvR3JhcGhpY3MvU1ZHLzEuMS9EVEQvc3ZnMTEuZHRkIj48c3ZnIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiIHdpZHRoPSIxNnB4IiBoZWlnaHQ9IjE2cHgiIHZpZXdCb3g9IjAgMCAyNCAyNCIgdmVyc2lvbj0iMS4xIj48cGF0aCBzdHJva2U9IiMyOWI2ZjIiIGZpbGw9IiMyOWI2ZjIiIGQ9Ik0xNS41NSA1LjU1TDExIDF2My4wN0M3LjA2IDQuNTYgNCA3LjkyIDQgMTJzMy4wNSA3LjQ0IDcgNy45M3YtMi4wMmMtMi44NC0uNDgtNS0yLjk0LTUtNS45MXMyLjE2LTUuNDMgNS01LjkxVjEwbDQuNTUtNC40NXpNMTkuOTMgMTFjLS4xNy0xLjM5LS43Mi0yLjczLTEuNjItMy44OWwtMS40MiAxLjQyYy41NC43NS44OCAxLjYgMS4wMiAyLjQ3aDIuMDJ6TTEzIDE3Ljl2Mi4wMmMxLjM5LS4xNyAyLjc0LS43MSAzLjktMS42MWwtMS40NC0xLjQ0Yy0uNzUuNTQtMS41OS44OS0yLjQ2IDEuMDN6bTMuODktMi40MmwxLjQyIDEuNDFjLjktMS4xNiAxLjQ1LTIuNSAxLjYyLTMuODloLTIuMDJjLS4xNC44Ny0uNDggMS43Mi0xLjAyIDIuNDh6Ii8+PC9zdmc+',
-      cursor: 'crosshair',
-    },
-  })
+  addRotateToEntity(canvas, group)
 
   // 自定义右键菜单
   customContextMenu(canvas, group, [
@@ -471,6 +463,52 @@ function getAngleOfThreePoint(
   const angle = isRadian? Math.acos(cosA) : Math.acos(cosA) * 180 / Math.PI;
   
   return direct < 0? -angle:angle;
+}
+
+/**
+ * @description: 给元素添加旋转功能
+ */
+function addRotateToEntity(canvas: Canvas, group: DisplayObject) {
+  const rotateImg = new Image({
+    name: 'imgBox__rotateImg',
+    className: 'imgBox__rotateImg',
+    style: {
+      width: 20,
+      height: 20,
+      src: 'data:image/svg+xml;base64,PCFET0NUWVBFIHN2ZyBQVUJMSUMgIi0vL1czQy8vRFREIFNWRyAxLjEvL0VOIiAiaHR0cDovL3d3dy53My5vcmcvR3JhcGhpY3MvU1ZHLzEuMS9EVEQvc3ZnMTEuZHRkIj48c3ZnIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiIHdpZHRoPSIxNnB4IiBoZWlnaHQ9IjE2cHgiIHZpZXdCb3g9IjAgMCAyNCAyNCIgdmVyc2lvbj0iMS4xIj48cGF0aCBzdHJva2U9IiMyOWI2ZjIiIGZpbGw9IiMyOWI2ZjIiIGQ9Ik0xNS41NSA1LjU1TDExIDF2My4wN0M3LjA2IDQuNTYgNCA3LjkyIDQgMTJzMy4wNSA3LjQ0IDcgNy45M3YtMi4wMmMtMi44NC0uNDgtNS0yLjk0LTUtNS45MXMyLjE2LTUuNDMgNS01LjkxVjEwbDQuNTUtNC40NXpNMTkuOTMgMTFjLS4xNy0xLjM5LS43Mi0yLjczLTEuNjItMy44OWwtMS40MiAxLjQyYy41NC43NS44OCAxLjYgMS4wMiAyLjQ3aDIuMDJ6TTEzIDE3Ljl2Mi4wMmMxLjM5LS4xNyAyLjc0LS43MSAzLjktMS42MWwtMS40NC0xLjQ0Yy0uNzUuNTQtMS41OS44OS0yLjQ2IDEuMDN6bTMuODktMi40MmwxLjQyIDEuNDFjLjktMS4xNiAxLjQ1LTIuNSAxLjYyLTMuODloLTIuMDJjLS4xNC44Ny0uNDggMS43Mi0xLjAyIDIuNDh6Ii8+PC9zdmc+',
+      cursor: 'crosshair',
+    },
+  })
+
+  const boxBound = group.getBBox();
+  rotateImg.translateLocal(boxBound.width, -20)
+
+  group.appendChild(rotateImg);
+
+  let beginCoord: [number, number] = [0, 0];
+  let centerCoord: [number, number] = [boxBound.width, boxBound.height]
+  let beginRotate = 0;
+
+  interact(rotateImg as any, {
+    // 直接传入节点1
+      context: canvas.document as any, // 传入上下文
+    }).draggable({
+      onstart: function (event) {
+        if(disableDragDevice.value) return;
+        // 禁止画布移动
+        disableDragCamera.value = true;
+        beginCoord = [event.clientX, event.clientY];
+        centerCoord = [group.getLocalPosition()[0]+group.getBBox().width / 2, group.getLocalPosition()[1]+group.getBBox().height / 2];
+        beginRotate = group.getLocalEulerAngles();
+      },
+      onmove: function (event) {
+        if(disableDragDevice.value) return;
+        const angle = getAngleOfThreePoint(centerCoord, beginCoord, [event.clientX, event.clientY])
+        group.setLocalEulerAngles(angle+beginRotate)
+      },
+    });
+
+  return rotateImg;
 }
 
 export {
