@@ -31,7 +31,7 @@ import { Canvas, Image, FederatedEvent } from '@antv/g';
 import { onMounted, shallowRef } from 'vue';
 import { addNode1, addNode2, addLine, addWheel, moveCamera,  } from './';
 import interact from 'interactjs';
-import { createImgEntity, imgDropHandle, createLine } from './comm';
+import { createImgEntity, imgDropHandle } from './comm';
 
 import IconPanel  from './iconPanel.vue';
 import { initData } from './data';

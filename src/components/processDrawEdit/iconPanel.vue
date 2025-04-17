@@ -9,14 +9,17 @@
 
 <template>
   <div class="iconPanel">
+    <h3>元件库</h3>
     <div class="iconPanel__header">
-      <h3>元件库</h3>
       <div class="iconPanel__tools">
-        <button @click="createLine(canvas!)" class="iconPanel__button">
-          画实线
+        <button @click="createLine(canvas!, {angle90: true})" class="iconPanel__button">
+          画直角实线
         </button>
-        <button @click="createLine(canvas!, { lineDash: [4, 4] })" class="iconPanel__button">
-          画虚线
+        <button @click="createLine(canvas!, {style: { lineDash: [4, 4] }, angle90: true})" class="iconPanel__button">
+          画直角虚线
+        </button>
+        <button @click="createLine(canvas!, {style: { lineDash: [4, 4] } })" class="iconPanel__button">
+          画任意虚线
         </button>
         <button @click="submitDrawing" class="iconPanel__button iconPanel__button--primary">
           提交
@@ -103,12 +106,15 @@ function submitDrawing() {
   padding: 10px 15px;
   background-color: #f5f7fa;
   border-bottom: 1px solid #e4e7ed;
+  flex-wrap: wrap ;
 }
 
-.iconPanel__header h3 {
+h3 {
   margin: 0;
   font-size: 16px;
   color: #303133;
+  text-align: center;
+  line-height: 48px;
 }
 
 .iconPanel__tools {

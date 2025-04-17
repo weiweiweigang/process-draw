@@ -327,7 +327,10 @@ function client2Canvas(canvas: Canvas, clientPoint: [number, number]) {
  * @description: 绘制管道
  * 鼠标左键点击一下记下一个点的坐标，鼠标双击完成绘制
  */
-function createLine(canvas: Canvas, style?: any) {
+function createLine(canvas: Canvas, param?: {
+  style?: any,
+  angle90?: boolean, // 转角是否必须90度
+}) {
   if(isCreateLine.value) return;
   isCreateLine.value = true;
 
@@ -346,7 +349,7 @@ function createLine(canvas: Canvas, style?: any) {
       lineWidth: 10,
       cursor: 'pointer',
       // lineDash: [4, 4],
-      ...style,
+      ...param?.style,
     },
   });
   console.log('polyline.id:', polyline.id)
@@ -357,6 +360,12 @@ function createLine(canvas: Canvas, style?: any) {
     console.log('click')
     // 计算坐标
     const point = client2Canvas(canvas, [event.clientX, event.clientY])
+
+    if(param?.angle90 && lineCoords.length) {
+      const cornerPoint: [number, number] = [lineCoords[lineCoords.length - 1][0], point.y];
+      lineCoords.push(cornerPoint)
+    }
+
     lineCoords.push([point.x, point.y]);
     polyline.style.points = JSON.parse(JSON.stringify(lineCoords));
 
@@ -428,9 +437,16 @@ function createLine(canvas: Canvas, style?: any) {
 
   // 鼠标悬浮移动时 线的终点跟随移动
   const hoverHandle = (event: any) => {
+    let temCoord = JSON.parse(JSON.stringify(lineCoords))
     // 计算坐标
     const point = client2Canvas(canvas, [event.clientX, event.clientY])
-    polyline.style.points = JSON.parse(JSON.stringify([...lineCoords, [point.x, point.y]]));
+
+    if(param?.angle90 && temCoord.length) {
+      const cornerPoint: [number, number] = [temCoord[temCoord.length - 1][0], point.y];
+      temCoord.push(cornerPoint)
+    }
+
+    polyline.style.points = [...temCoord, [point.x, point.y]];
   }
   canvas.addEventListener('mousemove', hoverHandle);
 }
@@ -588,4 +604,6 @@ export {
   createLine,
   // 求一个点伸出的两条线的夹角(带正负)
   getAngleOfThreePoint,
+  // 给元素添加旋转功能
+  addRotateToEntity,
 }
