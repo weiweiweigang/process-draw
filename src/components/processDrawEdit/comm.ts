@@ -8,13 +8,13 @@
  */
 import { Canvas, DisplayObject, ElementEvent, Group, HTML, Image, Path, Polyline, Rect, type ImageStyleProps } from '@antv/g';
 import interact from 'interactjs';
-import { disableDragDevice, isCreateLine, disableDragCamera, panelData } from './data';
+import { disableDragDevice, isCreateLine, disableDragCamera, panelData, type MenuDataItem } from './data';
 import { v4 as uuidv4 } from 'uuid';
 
 /**
  * @description: 给图片元素添加鼠标移入高亮
  */
-export function addEmphaticToImgGroupWhenHover(el: any) {
+function addEmphaticToImgGroupWhenHover(el: any) {
   const element: any = el.querySelector('.imgBox__Rect');
   if(!element) return;
   // 存储原始的图形样式属性
@@ -44,7 +44,7 @@ export function addEmphaticToImgGroupWhenHover(el: any) {
 /**
  * @description: 给图片元素添加拖拽效果
  */
-export function addDragToImgGroup(canvas: Canvas, el: any) {
+function addDragToImgGroup(canvas: Canvas, el: any) {
   const camera = canvas.getCamera();
 
   interact(el as any, {
@@ -86,35 +86,23 @@ export function addDragToImgGroup(canvas: Canvas, el: any) {
 /**
  * @description: 给元素自定义右键菜单
  */
-export function customContextMenu(canvas: Canvas, el: DisplayObject) {
+function customContextMenu(canvas: Canvas, el: DisplayObject, menuData: MenuDataItem []) {
   el.addEventListener('rightup', (e: any) => {
-    console.log('%c [ e ]-91', 'font-size:13px; background:#ece48a; color:#ffffce;', e);
-    // // 阻止浏览器默认的右键菜单
-    // e.preventDefault();
-    // // 阻止事件传播
-    // e.stopPropagation();
+    // e.preventDefault(); // 阻止浏览器默认的右键菜单
+    // e.stopPropagation(); // 阻止事件传播
     console.log('%c [ el ]-90', 'font-size:13px; background:#f62979; color:#ff6dbd;', el.id);
     
-    const point = client2Canvas(canvas, [e.clientX, e.clientY])
+    const point = client2Canvas(canvas, [e.clientX, e.clientY]);
 
-    const innerHtml = `<div class="context-menu">
-        <div class="context-menu__item" data-action="edit">
-          <i class="context-menu__icon">✏️</i>编辑
+    let innerHtml = `<div id="antVGContextMenu"><div class="context-menu">`
+    for(const item of menuData) {
+      innerHtml += `
+        <div class="context-menu__item" data-key="${item.key}">
+          <i class="context-menu__icon">${ item.icon }</i>${ item.label }
         </div>
-        <div class="context-menu__item" data-action="copy">
-          <i class="context-menu__icon">📋</i>复制
-        </div>
-        <div class="context-menu__item" data-action="delete">
-          <i class="context-menu__icon">🗑️</i>删除
-        </div>
-        <div class="context-menu__divider"></div>
-        <div class="context-menu__item" data-action="bringToFront">
-          <i class="context-menu__icon">⬆️</i>置于顶层
-        </div>
-        <div class="context-menu__item" data-action="sendToBack">
-          <i class="context-menu__icon">⬇️</i>置于底层
-        </div>
-      </div>`
+      `
+    }
+    innerHtml += `</div></div>`;
     
     // 自定义右键菜单
     const html = new HTML({
@@ -124,64 +112,30 @@ export function customContextMenu(canvas: Canvas, el: DisplayObject) {
             width: 100,
             height: 100,
             innerHTML: innerHtml,
+            pointerEvents: 'all',
         },
     });
     canvas.appendChild(html);
 
     setTimeout(() => {
-      console.log('%c [ document.querySelector(".context-menu") ]-133', 'font-size:13px; background:#52ca7d; color:#96ffc1;', document.querySelector('.context-menu'));
-
-      document.querySelector('.context-menu__item')?.addEventListener('click', (e: any) => {
-        console.log('%c [ e ]-133', 'font-size:13px; background:#3277e3; color:#76bbff;', e);
-
-      })
+      const items = document.querySelectorAll('#antVGContextMenu .context-menu__item');
+      for(const item of items) {
+        item.addEventListener('click', (e: any) => {
+          console.log('%c [ e ]-133', 'font-size:13px; background:#3277e3; color:#76bbff;', e);
+          const menuKey = e.target.dataset.key;
+          const menuItem = menuData.find(item => item.key === menuKey);
+          menuItem?.clickHandle(menuItem.clickParam);
+          html.remove();
+        })
+      }
     }, 200)
-
-
-    // html.addEventListener(ElementEvent.MOUNTED, () => {
-    //   const container = html.getContainer();
-    //   if (container) {
-    //     container.appendChild(styleElement);
-        
-    //     // 为菜单项添加点击事件
-    //     const menuItems = container.querySelectorAll('.context-menu__item');
-    //     menuItems.forEach(item => {
-    //       item.addEventListener('click', (event) => {
-    //         const action = (event.currentTarget as HTMLElement).dataset.action;
-            
-    //         switch (action) {
-    //           case 'delete':
-    //             if (el.parent) {
-    //               el.parent.removeChild(el);
-    //             }
-    //             break;
-    //           case 'edit':
-    //             console.log('编辑元素:', el.id);
-    //             break;
-    //           case 'copy':
-    //             console.log('复制元素:', el.id);
-    //             // 这里可以实现复制功能
-    //             break;
-    //           case 'bringToFront':
-    //             el.style.zIndex = 999;
-    //             break;
-    //           case 'sendToBack':
-    //             el.style.zIndex = 1;
-    //             break;
-    //         }
-            
-    //         closeMenu();
-    //       });
-    //     });
-    //   }
-    // })
   })
 }
 
 /**
  * @description: 新建一个img元素
  */
-export  function createImgEntity(canvas: Canvas, param: {
+ function createImgEntity(canvas: Canvas, param: {
   x: number,
   y: number,
   src: string,
@@ -252,15 +206,62 @@ export  function createImgEntity(canvas: Canvas, param: {
   addDragToImgGroup(canvas, group)
 
   // 自定义右键菜单
-  customContextMenu(canvas, group)
+  customContextMenu(canvas, group, [
+    {
+      key: 'edit',
+      label: '编辑',
+      icon: '✏️',
+      clickParam: group.id,
+      clickHandle: (id: string) => {
+        console.log('%c [ id ]-212', 'font-size:13px; background:#fff; color:#ff4bff;', id);
+      },
+    },
+    {
+      key: 'copy',
+      label: '复制',
+      icon: '📋',
+      clickParam: group.id,
+      clickHandle: (id: string) => {
+        console.log('%c [ id ]-212', 'font-size:13px; background:#fff; color:#ff4bff;', id);
+      },
+    },
+    {
+      key: 'delete',
+      label: '删除',
+      icon: '🗑️',
+      clickParam: group.id,
+      clickHandle: (id: string) => {
+        console.log('%c [ id ]-212', 'font-size:13px; background:#fff; color:#ff4bff;', id);
+        canvas.document.querySelector('#'+id)?.remove();
+      },
+    },
+    {
+      key: 'top',
+      label: '置顶',
+      icon: '⬆️',
+      clickParam: group.id,
+      clickHandle: (id: string) => {
+        console.log('%c [ id ]-212', 'font-size:13px; background:#fff; color:#ff4bff;', id);
+      },
+    },
+    {
+      key: 'bottom',
+      label: '置底',
+      icon: '⬇️',
+      clickParam: group.id,
+      clickHandle: (id: string) => {
+        console.log('%c [ id ]-212', 'font-size:13px; background:#fff; color:#ff4bff;', id);
+      },
+    },
+  ])
 
   return group;
 }
 
 /**
- * @description: 拓扑元件过来新增
+ * @description: 拖拽元件过来新增
  */
-export function imgDropHandle(canvas: Canvas, event:any) {
+function imgDropHandle(canvas: Canvas, event:any) {
   event.preventDefault();
   
   const data = event.dataTransfer.getData('Text');
@@ -281,7 +282,7 @@ export function imgDropHandle(canvas: Canvas, event:any) {
 /**
  * @description: 把输入的屏幕坐标转换为画布坐标
  */
-export function client2Canvas(canvas: Canvas, clientPoint: [number, number]) {
+function client2Canvas(canvas: Canvas, clientPoint: [number, number]) {
   // - 计算当前点坐标
   let point = canvas.client2Viewport({ x: clientPoint[0], y: clientPoint[1]});
   point =canvas.viewport2Canvas(point);
@@ -304,7 +305,7 @@ export function client2Canvas(canvas: Canvas, clientPoint: [number, number]) {
  * @description: 绘制管道
  * 鼠标左键点击一下记下一个点的坐标，鼠标双击完成绘制
  */
-export function createLine(canvas: Canvas, style?: any) {
+function createLine(canvas: Canvas, style?: any) {
   if(isCreateLine.value) return;
   isCreateLine.value = true;
 
@@ -340,7 +341,54 @@ export function createLine(canvas: Canvas, style?: any) {
     if(lineCoords.length === 1) {
       canvas.appendChild(polyline);
       addDragToImgGroup(canvas, polyline);
-      customContextMenu(canvas, polyline)
+      customContextMenu(canvas, polyline, [
+        {
+          key: 'edit',
+          label: '编辑',
+          icon: '✏️',
+          clickParam: polyline.id,
+          clickHandle: (id: string) => {
+            console.log('%c [ id ]-212', 'font-size:13px; background:#fff; color:#ff4bff;', id);
+          },
+        },
+        {
+          key: 'copy',
+          label: '复制',
+          icon: '📋',
+          clickParam: polyline.id,
+          clickHandle: (id: string) => {
+            console.log('%c [ id ]-212', 'font-size:13px; background:#fff; color:#ff4bff;', id);
+          },
+        },
+        {
+          key: 'delete',
+          label: '删除',
+          icon: '🗑️',
+          clickParam: polyline.id,
+          clickHandle: (id: string) => {
+            console.log('%c [ id ]-212', 'font-size:13px; background:#fff; color:#ff4bff;', id);
+            canvas.document.querySelector('#'+id)?.remove();
+          },
+        },
+        {
+          key: 'top',
+          label: '置顶',
+          icon: '⬆️',
+          clickParam: polyline.id,
+          clickHandle: (id: string) => {
+            console.log('%c [ id ]-212', 'font-size:13px; background:#fff; color:#ff4bff;', id);
+          },
+        },
+        {
+          key: 'bottom',
+          label: '置底',
+          icon: '⬇️',
+          clickParam: polyline.id,
+          clickHandle: (id: string) => {
+            console.log('%c [ id ]-212', 'font-size:13px; background:#fff; color:#ff4bff;', id);
+          },
+        },
+      ])
     }
 
     // 两次点击的时间少于500ms判断为双击
@@ -363,4 +411,21 @@ export function createLine(canvas: Canvas, style?: any) {
     polyline.style.points = JSON.parse(JSON.stringify([...lineCoords, [point.x, point.y]]));
   }
   canvas.addEventListener('mousemove', hoverHandle);
+}
+
+export {
+  // 给图片元素添加鼠标移入高亮
+  addEmphaticToImgGroupWhenHover,
+  // 给图片元素添加拖拽
+  addDragToImgGroup,
+  // 给元素添加右键菜单
+  customContextMenu,
+  // 新建一个img元素
+  createImgEntity,
+  // 拖拽元件过来新增
+  imgDropHandle,
+  // 把输入的屏幕坐标转换为画布坐标
+  client2Canvas,
+  // 绘制管道
+  createLine,
 }

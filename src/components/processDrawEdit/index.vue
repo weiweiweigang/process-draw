@@ -71,34 +71,36 @@ async function  initCanvas() {
 </script>
 
 <style>
-.context-menu {
-  background: white;
-  border-radius: 4px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
-  padding: 5px 0;
-  min-width: 150px;
-  font-family: 'Arial', sans-serif;
-  font-size: 14px;
-}
-.context-menu__item {
-  padding: 8px 12px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  color: #333;
-  transition: background-color 0.2s;
-}
-.context-menu__item:hover {
-  background-color: #f0f0f0;
-}
-.context-menu__icon {
-  margin-right: 8px;
-  font-style: normal;
-}
-.context-menu__divider {
-  height: 1px;
-  background-color: #e0e0e0;
-  margin: 5px 0;
+#antVGContextMenu {
+  .context-menu {
+    background: white;
+    border-radius: 4px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+    padding: 5px 0;
+    min-width: 150px;
+    font-family: 'Arial', sans-serif;
+    font-size: 14px;
+  }
+  .context-menu__item {
+    padding: 8px 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    color: #333;
+    transition: background-color 0.2s;
+  }
+  .context-menu__item:hover {
+    background-color: #f0f0f0;
+  }
+  .context-menu__icon {
+    margin-right: 8px;
+    font-style: normal;
+  }
+  .context-menu__divider {
+    height: 1px;
+    background-color: #e0e0e0;
+    margin: 5px 0;
+  }
 }
 </style>
 

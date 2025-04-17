@@ -40,15 +40,13 @@
             v-if="item.path"
             class="localSvg" 
             version="1.1" 
-            :viewBox="'0 0 '+(item.width>100? 100:item.width)+' '+(item.height>100? 100:item.height)" 
+            :viewBox="`0 0 ${item.width>100? 100:item.width} ${item.height>100? 100:item.height}`"
             :width="item.width>100? 100:item.width"
             :height="item.height>100? 100:item.height"
             xmlns="http://www.w3.org/2000/svg" 
             xmlns:xlink="http://www.w3.org/1999/xlink"
           >
-            <g :fill="item.color ?? '#54BECC'" >
-              <path :d="item.path" />
-            </g>
+            <path :fill="item.color ?? '#54BECC'" :d="item.path" />
           </svg>
           <img v-else :src="`/static/processDrawEdit/${item.img}`" :width="item.width>100? 100:item.width" />
         </div>
