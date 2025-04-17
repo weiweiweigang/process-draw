@@ -2,11 +2,11 @@
  * @Author: Strayer
  * @Date: 2025-04-15
  * @LastEditors: Strayer
- * @LastEditTime: 2025-04-16
+ * @LastEditTime: 2025-04-17
  * @Description: 
  * @FilePath: \processDraw\src\components\processDrawEdit\comm.ts
  */
-import { Canvas, DisplayObject, ElementEvent, Group, HTML, Image, Polyline, Rect, type ImageStyleProps } from '@antv/g';
+import { Canvas, DisplayObject, ElementEvent, Group, HTML, Image, Path, Polyline, Rect, type ImageStyleProps } from '@antv/g';
 import interact from 'interactjs';
 import { disableDragDevice, isCreateLine, disableDragCamera, panelData } from './data';
 import { v4 as uuidv4 } from 'uuid';
@@ -187,6 +187,8 @@ export  function createImgEntity(canvas: Canvas, param: {
   src: string,
   width: number,
   height: number,
+  path?: string,
+  color?: string,
 }) {
   const paddingPx = 8;
   const width = param.width + paddingPx * 2;
@@ -216,7 +218,7 @@ export  function createImgEntity(canvas: Canvas, param: {
   })
   group.appendChild(box);
 
-  const imageEntity = new Image({
+  let imageEntity: DisplayObject = new Image({
     name: 'imgBox__img',
     className: 'imgBox__img',
     style: {
@@ -225,6 +227,19 @@ export  function createImgEntity(canvas: Canvas, param: {
       src: param.src,
     },
   });
+  if(param.path) {
+    imageEntity = new Path({
+      name: 'imgBox__path',
+      className: 'imgBox__path',
+      style: {
+        d: param.path,
+        fill: param.color ?? '#54BECC',
+        // cursor: 'pointer',
+      },
+    });
+    // imageEntity.setLocalScale(0.5) // TODO: 这里要去掉
+  }
+
   imageEntity.translateLocal(paddingPx, paddingPx)
   group.appendChild(imageEntity);
   
@@ -255,10 +270,9 @@ export function imgDropHandle(canvas: Canvas, event:any) {
     const point = client2Canvas(canvas, [event.clientX, event.clientY])
 
     createImgEntity(canvas, {
+      ...item,
       x: point.x,
       y: point.y,
-      width: item.width,
-      height: item.height,
       src: '/static/processDrawEdit/'+item.img,
     })
   }

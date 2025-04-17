@@ -2,22 +2,17 @@
  * @Author: Strayer
  * @Date: 2025-04-15
  * @LastEditors: Strayer
- * @LastEditTime: 2025-04-16
+ * @LastEditTime: 2025-04-17
  * @Description: 
  * @FilePath: \processDraw\src\components\processDrawEdit\index.vue
 -->
 
 <template>
   <div class="demo">
-    <div style="position: absolute; top: 10px; right: 10px;">
-      <button @click="createLine(canvas!);">画实线</button>
-      <button @click="createLine(canvas!, { lineDash: [4, 4] })">画虚线</button>
-
-    </div>
     <div 
       :ondrop="(e: any) => imgDropHandle(canvas!, e)" 
       :ondragover="(e: any) => e.preventDefault()" 
-      style="border: 1px solid #ff0;"
+      style="border: 1px solid #ff0; width: 100%; height: 100%;"
     >
       <canvas
         id="container"
@@ -26,7 +21,7 @@
           height: 100%;"
       />
     </div>
-    <IconPanel />
+    <IconPanel :canvas="canvas"/>
   </div>
 </template>
 
