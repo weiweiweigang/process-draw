@@ -172,6 +172,14 @@ function createImgEntity(canvas: Canvas, param: {
   group.translate(-width/2, -height/2)
   group.setOrigin(width/2, height/2)
 
+  // 内部加个box做旋转
+  const groupInner = new Group({
+    name: 'imgBox__inner',
+    className: 'imgBox__inner',
+  });
+  groupInner.setOrigin(width/2, height/2)
+  group.appendChild(groupInner);
+
   // 用矩形做高亮的边框
   const box = new Rect({
     name: 'imgBox__Rect',
@@ -181,7 +189,7 @@ function createImgEntity(canvas: Canvas, param: {
       height: height,
     }
   })
-  group.appendChild(box);
+  groupInner.appendChild(box);
 
   let imageEntity: DisplayObject = new Image({
     name: 'imgBox__img',
@@ -206,7 +214,7 @@ function createImgEntity(canvas: Canvas, param: {
   }
 
   imageEntity.translateLocal(paddingPx, paddingPx)
-  group.appendChild(imageEntity);
+  groupInner.appendChild(imageEntity);
   
   // 高亮
   addEmphaticToImgGroupWhenHover(group);
@@ -217,7 +225,7 @@ function createImgEntity(canvas: Canvas, param: {
   addDragToImgGroup(canvas, group)
 
   // 添加旋转功能
-  addRotateToEntity(canvas, group)
+  addRotateToEntity(canvas, groupInner)
 
   // 自定义右键菜单
   customContextMenu(canvas, group, [
@@ -480,14 +488,45 @@ function addRotateToEntity(canvas: Canvas, group: DisplayObject) {
     },
   })
 
-  const boxBound = group.getBBox();
+  
+  let boxBound = group.getBBox();
   rotateImg.translateLocal(boxBound.width, -20)
 
   group.appendChild(rotateImg);
 
   let beginCoord: [number, number] = [0, 0];
-  let centerCoord: [number, number] = [boxBound.width, boxBound.height]
+  let centerCoord: [number, number] = [0, 0]
   let beginRotate = 0;
+
+  // 这三个点做调试用，后期确定程序没问题了可以删除这三个点
+  const centerP = new Circle({
+    style: {
+      r: 4,
+      fill: '#f04864',
+      pointerEvents: 'none',
+      visibility: 'hidden',
+    },
+  });
+  const beginP = new Circle({
+    style: {
+      r: 4,
+      fill: '#4af047',
+      pointerEvents: 'none',
+      visibility: 'hidden',
+    },
+  });
+  const endP = new Circle({
+    style: {
+      r: 4,
+      fill: '#47c8f0',
+      pointerEvents: 'none',
+      visibility: 'hidden',
+    },
+  });
+  canvas.appendChild(centerP);
+  canvas.appendChild(beginP);
+  canvas.appendChild(endP);
+
 
   interact(rotateImg as any, {
     // 直接传入节点1
@@ -495,16 +534,37 @@ function addRotateToEntity(canvas: Canvas, group: DisplayObject) {
     }).draggable({
       onstart: function (event) {
         if(disableDragDevice.value) return;
+        boxBound = group.getBBox();
         // 禁止画布移动
         disableDragCamera.value = true;
-        beginCoord = [event.clientX, event.clientY];
-        centerCoord = [group.getLocalPosition()[0]+group.getBBox().width / 2, group.getLocalPosition()[1]+group.getBBox().height / 2];
+        const beginCanvasP = client2Canvas(canvas, [event.clientX, event.clientY])
+        beginCoord = [beginCanvasP.x, beginCanvasP.y];
+        centerCoord = [boxBound.x + boxBound.width / 2, boxBound.y+boxBound.height / 2] // [group.getPosition()[0]+boxBound.width / 2, group.getPosition()[1]+boxBound.height / 2];
         beginRotate = group.getLocalEulerAngles();
+
+        beginP.setPosition(beginCoord).style.visibility = 'visible';
+        centerP.setPosition(centerCoord).style.visibility = 'visible';
+        endP.setPosition(beginCoord).style.visibility = 'visible';
       },
       onmove: function (event) {
         if(disableDragDevice.value) return;
-        const angle = getAngleOfThreePoint(centerCoord, beginCoord, [event.clientX, event.clientY])
+        const endCanvasP = client2Canvas(canvas, [event.clientX, event.clientY])
+
+        const angle = getAngleOfThreePoint(centerCoord, beginCoord, [endCanvasP.x, endCanvasP.y])
         group.setLocalEulerAngles(angle+beginRotate)
+
+        endP.setPosition([endCanvasP.x, endCanvasP.y])
+      },
+      onend: function (event) {
+        if(disableDragDevice.value) return;
+        centerP.style.visibility = 'hidden';
+        beginP.style.visibility = 'hidden';
+        endP.style.visibility = 'hidden';
+
+        // 恢复画布移动
+        setTimeout(() => {
+          disableDragCamera.value = false;
+        }, 100);
       },
     });
 

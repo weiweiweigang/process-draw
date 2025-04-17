@@ -65,6 +65,15 @@ async function  initCanvas() {
   // 使用 hammer.js 实现相机移动
   moveCamera(canvas.value);
 
+  // 默认初伤添加一个元件出来显示
+  createImgEntity(canvas.value, {
+    x: 500,
+    y: 500,
+    src: '/static/processDrawEdit/cqxsc.png',
+    width: 447,
+    height: 110,
+  });
+
   // console.log('%c [ canvas.getCamera().getPosition() ]-110', 'font-size:13px; background:#3d6a2b; color:#81ae6f;', canvas.getCamera().getPosition());
   // console.log(canvas.getConfig().width)
 }
