@@ -92,9 +92,9 @@ function customContextMenu(canvas: Canvas, el: DisplayObject, menuData: MenuData
     // e.stopPropagation(); // 阻止事件传播
     console.log('%c [ el ]-90', 'font-size:13px; background:#f62979; color:#ff6dbd;', el.id);
     
-    const point = client2Canvas(canvas, [e.clientX, e.clientY]);
+    const point = client2Canvas(canvas, [e.clientX+10, e.clientY]);
 
-    let innerHtml = `<div id="antVGContextMenu"><div class="context-menu">`
+    let innerHtml = `<div class="context-menu">`
     for(const item of menuData) {
       innerHtml += `
         <div class="context-menu__item" data-key="${item.key}">
@@ -102,10 +102,11 @@ function customContextMenu(canvas: Canvas, el: DisplayObject, menuData: MenuData
         </div>
       `
     }
-    innerHtml += `</div></div>`;
+    innerHtml += `</div>`;
     
     // 自定义右键菜单
     const html = new HTML({
+        id: 'antVGContextMenu',
         style: {
             x: point.x,
             y: point.y,
@@ -118,6 +119,7 @@ function customContextMenu(canvas: Canvas, el: DisplayObject, menuData: MenuData
     canvas.appendChild(html);
 
     setTimeout(() => {
+      // 监听菜单选项点击事件
       const items = document.querySelectorAll('#antVGContextMenu .context-menu__item');
       for(const item of items) {
         item.addEventListener('click', (e: any) => {
@@ -126,8 +128,16 @@ function customContextMenu(canvas: Canvas, el: DisplayObject, menuData: MenuData
           const menuItem = menuData.find(item => item.key === menuKey);
           menuItem?.clickHandle(menuItem.clickParam);
           html.remove();
+          canvas.removeEventListener('click', clickRemoveHand);
         })
       }
+
+      const clickRemoveHand = (e: any) => {
+        html.remove();
+        canvas.removeEventListener('click', clickRemoveHand);
+      }
+      // 监听画布点击事件移除菜单
+      canvas.addEventListener('click', clickRemoveHand);
     }, 200)
   })
 }
@@ -135,7 +145,7 @@ function customContextMenu(canvas: Canvas, el: DisplayObject, menuData: MenuData
 /**
  * @description: 新建一个img元素
  */
- function createImgEntity(canvas: Canvas, param: {
+function createImgEntity(canvas: Canvas, param: {
   x: number,
   y: number,
   src: string,
@@ -204,6 +214,18 @@ function customContextMenu(canvas: Canvas, el: DisplayObject, menuData: MenuData
 
   // 拖拽, 已添加到画布时前提
   addDragToImgGroup(canvas, group)
+
+  // 添加旋转功能
+  const rotateImg = new Image({
+    name: 'imgBox__rotateImg',
+    className: 'imgBox__rotateImg',
+    style: {
+      width: 20,
+      height: 20,
+      src: 'data:image/svg+xml;base64,PCFET0NUWVBFIHN2ZyBQVUJMSUMgIi0vL1czQy8vRFREIFNWRyAxLjEvL0VOIiAiaHR0cDovL3d3dy53My5vcmcvR3JhcGhpY3MvU1ZHLzEuMS9EVEQvc3ZnMTEuZHRkIj48c3ZnIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiIHdpZHRoPSIxNnB4IiBoZWlnaHQ9IjE2cHgiIHZpZXdCb3g9IjAgMCAyNCAyNCIgdmVyc2lvbj0iMS4xIj48cGF0aCBzdHJva2U9IiMyOWI2ZjIiIGZpbGw9IiMyOWI2ZjIiIGQ9Ik0xNS41NSA1LjU1TDExIDF2My4wN0M3LjA2IDQuNTYgNCA3LjkyIDQgMTJzMy4wNSA3LjQ0IDcgNy45M3YtMi4wMmMtMi44NC0uNDgtNS0yLjk0LTUtNS45MXMyLjE2LTUuNDMgNS01LjkxVjEwbDQuNTUtNC40NXpNMTkuOTMgMTFjLS4xNy0xLjM5LS43Mi0yLjczLTEuNjItMy44OWwtMS40MiAxLjQyYy41NC43NS44OCAxLjYgMS4wMiAyLjQ3aDIuMDJ6TTEzIDE3Ljl2Mi4wMmMxLjM5LS4xNyAyLjc0LS43MSAzLjktMS42MWwtMS40NC0xLjQ0Yy0uNzUuNTQtMS41OS44OS0yLjQ2IDEuMDN6bTMuODktMi40MmwxLjQyIDEuNDFjLjktMS4xNiAxLjQ1LTIuNSAxLjYyLTMuODloLTIuMDJjLS4xNC44Ny0uNDggMS43Mi0xLjAyIDIuNDh6Ii8+PC9zdmc+',
+      cursor: 'crosshair',
+    },
+  })
 
   // 自定义右键菜单
   customContextMenu(canvas, group, [
@@ -413,6 +435,44 @@ function createLine(canvas: Canvas, style?: any) {
   canvas.addEventListener('mousemove', hoverHandle);
 }
 
+/**
+ * @description: 求一个点伸出的两条线的夹角(带正负)
+ * @param {*} centerA 中心点坐标
+ * @param {*} pointB 旋转起点末端坐标
+ * @param {*} pointC 旋转终点末端坐标
+ * @param {*} isRadian 是否要弧度值(默认拿角度值)
+ * @return {*} 返回旋转角度(带正负)
+ */
+function getAngleOfThreePoint(
+  centerA: [number, number], 
+  pointB: [number, number], 
+  pointC: [number, number],
+  isRadian?: boolean
+): number  {
+  // 0.根据向量法求出旋转方向
+  const AB = [0, 0];
+  const AC = [0, 0];
+  AB[0] = (pointB[0] - centerA[0]);
+  AB[1] = (pointB[1] - centerA[1]);
+  AC[0] = (pointC[0] - centerA[0]);
+  AC[1] = (pointC[1] - centerA[1]); // 分别求出AB,AC的向量坐标表示
+  const direct = (AB[0] * AC[1]) - (AB[1] * AC[0]); // AB与AC叉乘求出逆时针还是顺时针旋转
+
+  // 1.先算出三条边的长度
+  // 2.利用两点坐标求直线公式算出AB,AC,BC线段的长度
+  const lengthAB = Math.sqrt(Math.pow(centerA[0] - pointB[0], 2) + Math.pow(centerA[1] - pointB[1], 2));
+  const lengthAC = Math.sqrt(Math.pow(centerA[0] - pointC[0], 2) + Math.pow(centerA[1] - pointC[1], 2));
+  const lengthBC = Math.sqrt(Math.pow(pointB[0] - pointC[0], 2) + Math.pow(pointB[1] - pointC[1], 2));
+
+  // 3.已知三角形的三边长，求cos值的公式：cos A=(b²+c²-a²)/2bc
+  const cosA = (Math.pow(lengthAB, 2) + Math.pow(lengthAC, 2) - Math.pow(lengthBC, 2)) / (2 * lengthAB * lengthAC); //   余弦定理求出旋转角
+
+  // 4.在根据公式,转换成度数
+  const angle = isRadian? Math.acos(cosA) : Math.acos(cosA) * 180 / Math.PI;
+  
+  return direct < 0? -angle:angle;
+}
+
 export {
   // 给图片元素添加鼠标移入高亮
   addEmphaticToImgGroupWhenHover,
@@ -428,4 +488,6 @@ export {
   client2Canvas,
   // 绘制管道
   createLine,
+  // 求一个点伸出的两条线的夹角(带正负)
+  getAngleOfThreePoint,
 }
