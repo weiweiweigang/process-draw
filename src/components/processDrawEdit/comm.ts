@@ -2,42 +2,50 @@
  * @Author: Strayer
  * @Date: 2025-04-15
  * @LastEditors: Strayer
- * @LastEditTime: 2025-04-17
+ * @LastEditTime: 2025-04-18
  * @Description: 
  * @FilePath: \processDraw\src\components\processDrawEdit\comm.ts
  */
 import { Canvas, Circle, DisplayObject, ElementEvent, Group, HTML, Image, Path, Polyline, Rect, type ImageStyleProps } from '@antv/g';
 import interact from 'interactjs';
-import { disableDragDevice, isCreateLine, disableDragCamera, panelData, type MenuDataItem } from './data';
+import { disableDragDevice, isCreateLine, disableDragCamera, panelData, type MenuDataItem, chooseDevice } from './data';
 import { v4 as uuidv4 } from 'uuid';
 
 /**
  * @description: 给图片元素添加鼠标移入高亮
  */
-function addEmphaticToImgGroupWhenHover(el: any) {
-  const element: any = el.querySelector('.imgBox__Rect');
-  if(!element) return;
-  // 存储原始的图形样式属性
-  // const primitiveBorder = {
-  //   stroke: element.style.stroke,
-  //   lineWidth: element.style.lineWidth,
-  //   opacity: element.style.opacity,
-  // };
+function addEmphaticToImgGroupWhenHover(el: DisplayObject) {
+  const addEmphatic = (element: DisplayObject) => {
+    const elementAll = element.querySelectorAll('.chooseView');
+    for(const item of elementAll) {
+      item.style.visibility = 'visible';
+    }
+  }
+
+  const removeEmphatic = (element: DisplayObject) => {
+    const elementAll = element.querySelectorAll('.chooseView');
+    for(const item of elementAll) {
+      item.style.visibility = 'hidden';
+    }
+  }
+
+  el.addEventListener('click', (e: any) => {
+    if(chooseDevice.value) removeEmphatic(chooseDevice.value);
+
+    chooseDevice.value = el;
+    addEmphatic(el);
+  });
 
   el.addEventListener('mouseenter', (e: any) => {
-    // 修改图形样式属性
-    element.style.stroke = '#16bdf0';
-    element.style.lineWidth = 4;
-    element.style.opacity = 0.3;
+    if(chooseDevice.value?.id === el.id) return;
+
+    addEmphatic(el);
   });
 
   el.addEventListener('mouseleave', (e: any) => {
-    // 还原图形样式属性
-    // element.style.stroke = primitiveBorder.stroke;
-    // element.style.lineWidth = primitiveBorder.lineWidth;
-    // element.style.opacity = primitiveBorder.opacity;
-    element.style.lineWidth = 0;
+    if(chooseDevice.value?.id === el.id) return;
 
+    removeEmphatic(el);
   });
 }
 
@@ -141,11 +149,14 @@ function customContextMenu(canvas: Canvas, el: DisplayObject, menuData: MenuData
     }, 200)
   })
 }
-
+const imgPadding = 8;
 /**
  * @description: 新建一个img元素
  */
 function createImgEntity(canvas: Canvas, param: {
+  id?: string,
+  innerRotate?: number,
+
   x: number,
   y: number,
   src: string,
@@ -154,46 +165,49 @@ function createImgEntity(canvas: Canvas, param: {
   path?: string,
   color?: string,
 }) {
-  const paddingPx = 8;
-  const width = param.width + paddingPx * 2;
-  const height = param.height + paddingPx * 2;
+  const width = param.width + imgPadding * 2;
+  const height = param.height + imgPadding * 2;
 
   const group = new Group({
-    id: uuidv4(),
+    id: param.id ?? uuidv4(),
     name: 'imgBox',
     className: 'imgBox',
     style: {
       cursor: 'pointer',
-      // transform: 'translate(-100px, -100px)',
-      // transformOrigin: 'center',
     }
   });
   group.setPosition(param.x, param.y);
-  group.translate(-width/2, -height/2)
-  group.setOrigin(width/2, height/2)
+  group.translate(-width/2, -height/2);
+  group.setOrigin(width/2, height/2);
+  console.log('%c [ param.rotate ]-184', 'font-size:13px; background:#611893; color:#a55cd7;', param.innerRotate);
 
   // 内部加个box做旋转
   const groupInner = new Group({
     name: 'imgBox__inner',
     className: 'imgBox__inner',
   });
-  groupInner.setOrigin(width/2, height/2)
+  groupInner.setOrigin(width/2, height/2);
+  if(param.innerRotate) groupInner.setLocalEulerAngles(param.innerRotate);
   group.appendChild(groupInner);
 
   // 用矩形做高亮的边框
   const box = new Rect({
-    name: 'imgBox__Rect',
-    className: 'imgBox__Rect',
+    name: 'imgBox__rect',
+    className: 'imgBox__rect chooseView',
     style: {
       width: width,
       height: height,
+      stroke: '#16bdf0',
+      lineWidth: 4,
+      opacity: 0.3,
+      visibility: 'hidden'
     }
   })
   groupInner.appendChild(box);
 
   let imageEntity: DisplayObject = new Image({
     name: 'imgBox__img',
-    className: 'imgBox__img',
+    className: 'imgBox__img imgBox__contentIcon',
     style: {
       width: param.width,
       height: param.height,
@@ -203,17 +217,16 @@ function createImgEntity(canvas: Canvas, param: {
   if(param.path) {
     imageEntity = new Path({
       name: 'imgBox__path',
-      className: 'imgBox__path',
+      className: 'imgBox__path imgBox__contentIcon',
       style: {
         d: param.path,
         fill: param.color ?? '#54BECC',
         // cursor: 'pointer',
       },
     });
-    // imageEntity.setLocalScale(0.5) // TODO: 这里要去掉
   }
 
-  imageEntity.translateLocal(paddingPx, paddingPx)
+  imageEntity.translateLocal(imgPadding, imgPadding)
   groupInner.appendChild(imageEntity);
   
   // 高亮
@@ -225,7 +238,10 @@ function createImgEntity(canvas: Canvas, param: {
   addDragToImgGroup(canvas, group)
 
   // 添加旋转功能
-  addRotateToEntity(canvas, groupInner)
+  addRotateToEntity(canvas, group)
+
+  // 添加缩放功能
+  addScaleToEntity(canvas, group)
 
   // 自定义右键菜单
   customContextMenu(canvas, group, [
@@ -278,6 +294,42 @@ function createImgEntity(canvas: Canvas, param: {
   ])
 
   return group;
+}
+
+/**
+ * @description: 根据img元素的scale更新width
+ */
+function updateImgEntityWidth(canvas: Canvas, group: DisplayObject) {
+  const groupInner = group.querySelector('.imgBox__inner') as DisplayObject;
+  const imgEntity = group.querySelector('.imgBox__contentIcon') as DisplayObject;
+  console.log('%c [ imgEntity ]-305', 'font-size:13px; background:#9d5caf; color:#e1a0f3;', imgEntity);
+  const rectEntity = group.querySelector('.imgBox__rect') as DisplayObject;
+  const scaleEntity = group.querySelector('.imgBox__scale') as DisplayObject;
+  const rotateEntity = group.querySelector('.imgBox__rotateImg') as DisplayObject;
+
+  const originWidth  = rectEntity.style.width - imgPadding * 2;
+  const originHeight = rectEntity.style.height - imgPadding * 2;
+  const scale = group.getLocalScale()[0];
+  const newWidth = originWidth * scale;
+  const newHeight = originHeight * scale;
+
+  group.setLocalScale(1);
+  group.setOrigin(newWidth/2, newHeight/2);
+  group.translateLocal(-(newWidth - originWidth)/2, -(newHeight - originHeight)/2)
+
+  groupInner.setOrigin((newWidth + imgPadding * 2)/2, (newHeight+ imgPadding * 2)/2);
+  rectEntity.style.width = newWidth + imgPadding * 2;
+  rectEntity.style.height = newHeight + imgPadding * 2;
+
+  if(imgEntity.name === 'imgBox__img') {
+    imgEntity.style.width = newWidth;
+    imgEntity.style.height = newHeight;
+  } else {
+    imgEntity.setLocalScale(imgEntity.getLocalScale()[0]*scale);
+  }
+  
+  scaleEntity.setLocalPosition(rectEntity.style.width, rectEntity.style.height / 2);
+  rotateEntity.setLocalPosition(rectEntity?.style.width ?? 0, -20)
 }
 
 /**
@@ -493,22 +545,27 @@ function getAngleOfThreePoint(
  * @description: 给元素添加旋转功能
  */
 function addRotateToEntity(canvas: Canvas, group: DisplayObject) {
+  let rectEntity: DisplayObject = group.querySelector('.imgBox__rect')!;
+  const innerEntity: DisplayObject = group.querySelector('.imgBox__inner')!;
+
   const rotateImg = new Image({
     name: 'imgBox__rotateImg',
-    className: 'imgBox__rotateImg',
+    className: 'imgBox__rotateImg chooseView',
     style: {
       width: 20,
       height: 20,
       src: 'data:image/svg+xml;base64,PCFET0NUWVBFIHN2ZyBQVUJMSUMgIi0vL1czQy8vRFREIFNWRyAxLjEvL0VOIiAiaHR0cDovL3d3dy53My5vcmcvR3JhcGhpY3MvU1ZHLzEuMS9EVEQvc3ZnMTEuZHRkIj48c3ZnIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiIHdpZHRoPSIxNnB4IiBoZWlnaHQ9IjE2cHgiIHZpZXdCb3g9IjAgMCAyNCAyNCIgdmVyc2lvbj0iMS4xIj48cGF0aCBzdHJva2U9IiMyOWI2ZjIiIGZpbGw9IiMyOWI2ZjIiIGQ9Ik0xNS41NSA1LjU1TDExIDF2My4wN0M3LjA2IDQuNTYgNCA3LjkyIDQgMTJzMy4wNSA3LjQ0IDcgNy45M3YtMi4wMmMtMi44NC0uNDgtNS0yLjk0LTUtNS45MXMyLjE2LTUuNDMgNS01LjkxVjEwbDQuNTUtNC40NXpNMTkuOTMgMTFjLS4xNy0xLjM5LS43Mi0yLjczLTEuNjItMy44OWwtMS40MiAxLjQyYy41NC43NS44OCAxLjYgMS4wMiAyLjQ3aDIuMDJ6TTEzIDE3Ljl2Mi4wMmMxLjM5LS4xNyAyLjc0LS43MSAzLjktMS42MWwtMS40NC0xLjQ0Yy0uNzUuNTQtMS41OS44OS0yLjQ2IDEuMDN6bTMuODktMi40MmwxLjQyIDEuNDFjLjktMS4xNiAxLjQ1LTIuNSAxLjYyLTMuODloLTIuMDJjLS4xNC44Ny0uNDggMS43Mi0xLjAyIDIuNDh6Ii8+PC9zdmc+',
       cursor: 'crosshair',
+      visibility: 'hidden',
     },
   })
 
   
-  let boxBound = group.getBBox();
-  rotateImg.translateLocal(boxBound.width, -20)
+  rotateImg.translateLocal(rectEntity?.style.width ?? 0, -20)
 
-  group.appendChild(rotateImg);
+  let boxBound = rectEntity.getBBox();
+
+  innerEntity.appendChild(rotateImg);
 
   let beginCoord: [number, number] = [0, 0];
   let centerCoord: [number, number] = [0, 0]
@@ -550,13 +607,13 @@ function addRotateToEntity(canvas: Canvas, group: DisplayObject) {
     }).draggable({
       onstart: function (event) {
         if(disableDragDevice.value) return;
-        boxBound = group.getBBox();
+        boxBound = rectEntity.getBBox();
         // 禁止画布移动
         disableDragCamera.value = true;
         const beginCanvasP = client2Canvas(canvas, [event.clientX, event.clientY])
         beginCoord = [beginCanvasP.x, beginCanvasP.y];
-        centerCoord = [boxBound.x + boxBound.width / 2, boxBound.y+boxBound.height / 2] // [group.getPosition()[0]+boxBound.width / 2, group.getPosition()[1]+boxBound.height / 2];
-        beginRotate = group.getLocalEulerAngles();
+        centerCoord = [boxBound.x + boxBound.width / 2, boxBound.y+boxBound.height / 2]
+        beginRotate = innerEntity.getLocalEulerAngles();
 
         beginP.setPosition(beginCoord).style.visibility = 'visible';
         centerP.setPosition(centerCoord).style.visibility = 'visible';
@@ -567,7 +624,7 @@ function addRotateToEntity(canvas: Canvas, group: DisplayObject) {
         const endCanvasP = client2Canvas(canvas, [event.clientX, event.clientY])
 
         const angle = getAngleOfThreePoint(centerCoord, beginCoord, [endCanvasP.x, endCanvasP.y])
-        group.setLocalEulerAngles(angle+beginRotate)
+        innerEntity.setLocalEulerAngles(angle+beginRotate)
 
         endP.setPosition([endCanvasP.x, endCanvasP.y])
       },
@@ -585,6 +642,105 @@ function addRotateToEntity(canvas: Canvas, group: DisplayObject) {
     });
 
   return rotateImg;
+}
+
+/**
+ * @description: 给元素添加缩放功能 
+ */
+function addScaleToEntity(canvas: Canvas, group: DisplayObject) {
+  const innerEntity: DisplayObject = group.querySelector('.imgBox__inner')!;
+
+  const circle = new Circle({
+    name: 'imgBox__scale',
+    className: 'imgBox__scale chooseView',
+    style: {
+      r: 6,
+      fill: '#1890FF',
+      cursor: 'ew-resize',
+      visibility: 'hidden'
+    },
+  });
+
+  let rectEntity = group.querySelector('.imgBox__rect')!
+  circle.translateLocal(rectEntity.style.width, rectEntity.style.height / 2)
+
+  innerEntity.appendChild(circle);
+
+  const camera = canvas.getCamera();
+
+  let beginStatus = {
+    scale: [1, 1, 1] as [number, number, number],
+  }
+  let beginCoord: [number, number] = [0, 0];
+
+
+  interact(circle as any, {
+  // 直接传入节点1
+    context: canvas.document as any, // 传入上下文
+  }).draggable({
+    onstart: function (event) {
+      if(disableDragDevice.value) return;
+      // 禁止画布移动
+      disableDragCamera.value = true;
+
+      const imageEntity: DisplayObject = group.querySelector('.imgBox__contentIcon')!;
+
+      beginStatus = {
+        scale: [1, 1, 1], // imageEntity.getLocalScale() as any,
+      }
+      console.log('%c [ beginStatus11111111 ]-689', 'font-size:13px; background:#fceeaf; color:#fffff3;', beginStatus.scale);
+
+      let beginPoint = client2Canvas(canvas, [event.clientX, event.clientY]);
+      beginCoord = [beginPoint.x, beginPoint.y];
+    },
+    onmove: function (event) {
+      if(disableDragDevice.value) return;
+      const bbox = (group.querySelector('.imgBox__rect') as DisplayObject).getBBox();
+      // 计算中点
+      const centerPoint: [number, number] = [bbox.x + bbox.width / 2, bbox.y + bbox.height / 2];
+      // 计算当前点到中心点的距离
+      const curPoint = client2Canvas(canvas, [event.clientX, event.clientY]);
+      const curCoord: [number, number] = [curPoint.x, curPoint.y];
+      const curToCenterDistance = Math.sqrt(
+        Math.pow(curCoord[0] - centerPoint[0], 2) +
+        Math.pow(curCoord[1] - centerPoint[1], 2)
+      );
+      // console.log('%c [ curToCenterDistance ]-702', 'font-size:13px; background:#000; color:#61f7ff;', curToCenterDistance);
+
+      // 计算开始点到中心点的距离
+      const beginToCenterDistance = Math.sqrt(
+        Math.pow(beginCoord[0] - centerPoint[0], 2) + 
+        Math.pow(beginCoord[1] - centerPoint[1], 2)
+      );
+
+      // 计算当前点到中心的距离在开始点方向上的投影长度
+      const angle = getAngleOfThreePoint(centerPoint, beginCoord, curCoord, true);
+      // console.log('%c [ angle ]-715', 'font-size:13px; background:#7cdb0b; color:#c0ff4f;', angle);
+      const curLenOnBegin = curToCenterDistance * Math.cos(angle);
+      // console.log('%c [ curLenOnBegin ]-717', 'font-size:13px; background:#46d474; color:#8affb8;', curLenOnBegin);
+      // 计算缩放比例
+      const scaleOffset = curLenOnBegin / beginToCenterDistance;
+      // console.log('%c [ scaleOffset ]-717', 'font-size:13px; background:#edc755; color:#ffff99;', scaleOffset);
+
+      const newScale: [number, number, number] = [
+        beginStatus.scale[0] * scaleOffset,
+        beginStatus.scale[1] * scaleOffset,
+        beginStatus.scale[2],
+      ]
+
+      group.setLocalScale(newScale);
+    },
+    onend: function (event) {
+      if(disableDragDevice.value) return;
+      console.log('%c [ event ]-67', 'font-size:13px; background:#afb2d7; color:#f3f6ff;', event);
+
+      updateImgEntityWidth(canvas, group)
+
+      setTimeout(() => {
+        disableDragCamera.value = false;
+      }, 100)
+    },
+  });
 }
 
 export {
@@ -606,4 +762,6 @@ export {
   getAngleOfThreePoint,
   // 给元素添加旋转功能
   addRotateToEntity,
+  // 给元素添加缩放功能
+  addScaleToEntity,
 }

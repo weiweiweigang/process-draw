@@ -2,7 +2,7 @@
  * @Author: Strayer
  * @Date: 2025-04-15
  * @LastEditors: Strayer
- * @LastEditTime: 2025-04-17
+ * @LastEditTime: 2025-04-18
  * @Description: 
  * @FilePath: \processDraw\src\components\processDrawEdit\index.vue
 -->
@@ -36,6 +36,8 @@ import { createImgEntity, imgDropHandle } from './comm';
 import IconPanel  from './iconPanel.vue';
 import { initData } from './data';
 
+(window as any).__g_instances__ = [];
+
 onMounted(() => {
   initData();
   initCanvas();
@@ -53,6 +55,8 @@ async function  initCanvas() {
   });
 
   await canvas.value.ready;
+
+  (window as any).__g_instances__.push(canvas);
 
   // 阻止默认的右键菜单
   canvas.value!.getContextService()!.getDomElement()!.addEventListener('contextmenu', (e) => {

@@ -1,3 +1,4 @@
+import type { DisplayObject } from "@antv/g";
 import { ref, shallowRef } from "vue";
 
 // 右键菜单数据类型
@@ -172,8 +173,12 @@ export const isCreateLine = ref(false);
 // 是否禁止拖车所有元件和管道
 export const disableDragDevice = ref(false);
 
+// 当前选中的元件
+export const chooseDevice = shallowRef<DisplayObject>()
+
 export const initData = () => {
   disableDragCamera.value = false;
   isCreateLine.value = false;
   disableDragDevice.value = false;
+  chooseDevice.value = undefined;
 };
