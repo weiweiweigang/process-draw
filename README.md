@@ -1,33 +1,23 @@
-# processDraw
+# 工艺图编辑
 
-This template should help get you started developing with Vue 3 in Vite.
-
-## Recommended IDE Setup
-
-[VSCode](https://code.visualstudio.com/) + [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur).
-
-## Type Support for `.vue` Imports in TS
-
-TypeScript cannot handle type information for `.vue` imports by default, so we replace the `tsc` CLI with `vue-tsc` for type checking. In editors, we need [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) to make the TypeScript language service aware of `.vue` types.
-
-## Customize configuration
-
-See [Vite Configuration Reference](https://vite.dev/config/).
-
-## Project Setup
+## 安装项目
 
 ```sh
 pnpm install
 ```
 
-### Compile and Hot-Reload for Development
+### 运行项目
 
 ```sh
 pnpm dev
 ```
 
-### Type-Check, Compile and Minify for Production
-
-```sh
-pnpm build
-```
+# 操作说明
+- 画布移动和缩放：鼠标左键按住画布任意位置拖动和鼠标滚轮缩放
+- 添加元件：在元件面板上把鼠标放在元件上按住左键不放拖拽到画布上即可
+- 添加管道：在元件面板顶部单击画线按钮。然后去画布用鼠标左键单击即可，单击一次生成一个折线点位。双击结束生成管道
+- 删除元件和管道：右键元件或管道选择删除
+- 移动元件和管道：鼠标左键按住元件或管道拖动即可
+- 旋转元件：鼠标左键按住元件右上角的旋转图标拖动即可
+- 缩放元件：鼠标左键按住元件右边的小点拖动即可
+- 管道节点拖拽：点击一下管道，出现管道节点。鼠标左键按住管道节点拖动即可

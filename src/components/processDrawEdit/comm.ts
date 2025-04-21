@@ -2,7 +2,7 @@
  * @Author: Strayer
  * @Date: 2025-04-15
  * @LastEditors: Strayer
- * @LastEditTime: 2025-04-18
+ * @LastEditTime: 2025-04-21
  * @Description: 
  * @FilePath: \processDraw\src\components\processDrawEdit\comm.ts
  */
@@ -302,7 +302,6 @@ function createImgEntity(canvas: Canvas, param: {
 function updateImgEntityWidth(canvas: Canvas, group: DisplayObject) {
   const groupInner = group.querySelector('.imgBox__inner') as DisplayObject;
   const imgEntity = group.querySelector('.imgBox__contentIcon') as DisplayObject;
-  console.log('%c [ imgEntity ]-305', 'font-size:13px; background:#9d5caf; color:#e1a0f3;', imgEntity);
   const rectEntity = group.querySelector('.imgBox__rect') as DisplayObject;
   const scaleEntity = group.querySelector('.imgBox__scale') as DisplayObject;
   const rotateEntity = group.querySelector('.imgBox__rotateImg') as DisplayObject;
@@ -406,10 +405,29 @@ function createLine(canvas: Canvas, param?: {
   });
   console.log('polyline.id:', polyline.id)
 
+  // 添加移入高亮效果
+  addEmphaticToImgGroupWhenHover(polyline);
+
   // 鼠标左键点击一下记下一个点的坐标，鼠标双击完成绘制
   let perTapTime = new Date();
   const clickHandle = (event: any) => {
     console.log('click')
+
+    // 两次点击的时间少于500ms判断为双击
+    const nowTapTime = new Date();
+    if(nowTapTime.getTime() - perTapTime.getTime() < 300) {
+      // 添加可拖拽节点
+      addDragNodePointToLine(canvas, polyline)
+      
+      isCreateLine.value = false;
+      canvas.removeEventListener('click', clickHandle);
+      canvas.removeEventListener('mousemove', hoverHandle);
+      disableDragCamera.value = false;
+      disableDragDevice.value = false;
+      return;
+    }
+    perTapTime = nowTapTime;
+
     // 计算坐标
     const point = client2Canvas(canvas, [event.clientX, event.clientY])
 
@@ -473,17 +491,6 @@ function createLine(canvas: Canvas, param?: {
         },
       ])
     }
-
-    // 两次点击的时间少于500ms判断为双击
-    const nowTapTime = new Date();
-    if(nowTapTime.getTime() - perTapTime.getTime() < 300) {
-      isCreateLine.value = false;
-      canvas.removeEventListener('click', clickHandle);
-      canvas.removeEventListener('mousemove', hoverHandle);
-      disableDragCamera.value = false;
-      disableDragDevice.value = false;
-    }
-    perTapTime = nowTapTime;
   };
   canvas.addEventListener('click', clickHandle);
 
@@ -501,6 +508,77 @@ function createLine(canvas: Canvas, param?: {
     polyline.style.points = [...temCoord, [point.x, point.y]];
   }
   canvas.addEventListener('mousemove', hoverHandle);
+}
+
+/**
+ * @description: 给管道添加可拖拽节点
+ */
+function addDragNodePointToLine(canvas: Canvas, polyline: Polyline) {
+  const nodePoints: Circle [] = [];
+
+  for(let i = 0; i<polyline.style.points.length; i++) {
+    const point = polyline.style.points[i];
+
+    const nodePoint =  new Circle({
+      name: 'lineNodePoint',
+      className: 'lineNodePoint chooseView '+i,
+      style: {
+        r: 10,
+        cx: point[0],
+        cy: point[1],
+        fill: '#1890FF',
+        opacity: 0.5,
+        pointerEvents: 'all',
+        // visibility: 'hidden'
+      },
+    });
+    nodePoints.push(nodePoint)
+    polyline.appendChild(nodePoint);
+  }
+
+  const camera = canvas.getCamera();
+
+  for(const nodePoint of nodePoints) {
+    interact(nodePoint as any, {
+      // 直接传入节点1
+        context: canvas.document as any, // 传入上下文
+      }).draggable({
+        onstart: function (event) {
+          if(disableDragDevice.value) return;
+          // 禁止画布移动
+          disableDragCamera.value = true;
+        },
+        onmove: function (event) {
+          if(disableDragDevice.value) return;
+
+          const pointIndex = event.target.classList[2];
+    
+          // interact.js 告诉我们的偏移量
+          const { dx, dy } = event;
+          const zoom = camera.getZoom();
+
+          polyline.style.points[pointIndex][0] += dx / zoom;
+          polyline.style.points[pointIndex][1] += dy / zoom;
+    
+          // 改变节点1位置
+          nodePoint.translateLocal(dx / zoom, dy / zoom);
+          // 获取节点1位置
+          // const [nx, ny] = el.getLocalPosition();
+          // 改变边的端点位置
+          // edge.style.x1 = nx;
+          // edge.style.y1 = ny;
+        },
+        onend: function (event) {
+          if(disableDragDevice.value) return;
+    
+          console.log('%c [ event ]-67', 'font-size:13px; background:#afb2d7; color:#f3f6ff;', event);
+          // 恢复画布移动
+          setTimeout(() => {
+            disableDragCamera.value = false;
+          }, 100);
+        },
+      });
+  }
 }
 
 /**
@@ -688,7 +766,6 @@ function addScaleToEntity(canvas: Canvas, group: DisplayObject) {
       beginStatus = {
         scale: [1, 1, 1], // imageEntity.getLocalScale() as any,
       }
-      console.log('%c [ beginStatus11111111 ]-689', 'font-size:13px; background:#fceeaf; color:#fffff3;', beginStatus.scale);
 
       let beginPoint = client2Canvas(canvas, [event.clientX, event.clientY]);
       beginCoord = [beginPoint.x, beginPoint.y];
@@ -732,8 +809,6 @@ function addScaleToEntity(canvas: Canvas, group: DisplayObject) {
     },
     onend: function (event) {
       if(disableDragDevice.value) return;
-      console.log('%c [ event ]-67', 'font-size:13px; background:#afb2d7; color:#f3f6ff;', event);
-
       updateImgEntityWidth(canvas, group)
 
       setTimeout(() => {
