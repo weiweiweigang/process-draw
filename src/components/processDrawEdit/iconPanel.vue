@@ -9,8 +9,18 @@
 
 <template>
   <div class="iconPanel">
-    <h3>元件库</h3>
     <div class="iconPanel__header">
+      <div class="iconPanel__title-row">
+        <h3 class="iconPanel__title">元件库</h3>
+        <div class="iconPanel__title-buttons">
+          <button @click="submitDrawing" class="iconPanel__button iconPanel__button--primary">
+            提交
+          </button>
+          <button @click="togglePanel" class="iconPanel__toggle">
+            {{ isPanelCollapsed ? '展开' : '收起' }}
+          </button>
+        </div>
+      </div>
       <div class="iconPanel__tools">
         <button @click="createLine(canvas!, {angle90: true})" class="iconPanel__button">
           画直角实线
@@ -20,12 +30,6 @@
         </button>
         <button @click="createLine(canvas!, {style: { lineDash: [4, 4] } })" class="iconPanel__button">
           画任意虚线
-        </button>
-        <button @click="submitDrawing" class="iconPanel__button iconPanel__button--primary">
-          提交
-        </button>
-        <button @click="togglePanel" class="iconPanel__toggle">
-          {{ isPanelCollapsed ? '展开' : '收起' }}
         </button>
       </div>
     </div>
@@ -101,26 +105,38 @@ function submitDrawing() {
 
 .iconPanel__header {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 10px 15px;
+  flex-direction: column;
+  padding: 12px 15px;
   background-color: #f5f7fa;
   border-bottom: 1px solid #e4e7ed;
-  flex-wrap: wrap ;
 }
 
-h3 {
+.iconPanel__title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px dashed #e0e0e0;
+}
+
+.iconPanel__title {
   margin: 0;
   font-size: 16px;
   color: #303133;
-  text-align: center;
-  line-height: 48px;
+  font-weight: 600;
+}
+
+.iconPanel__title-buttons {
+  display: flex;
+  gap: 8px;
 }
 
 .iconPanel__tools {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
+  justify-content: flex-start;
 }
 
 /* 通用按钮样式 */

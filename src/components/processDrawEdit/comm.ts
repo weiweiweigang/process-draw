@@ -2,7 +2,7 @@
  * @Author: Strayer
  * @Date: 2025-04-15
  * @LastEditors: Strayer
- * @LastEditTime: 2025-04-21
+ * @LastEditTime: 2025-04-22
  * @Description: 
  * @FilePath: \processDraw\src\components\processDrawEdit\comm.ts
  */
@@ -10,6 +10,7 @@ import { Canvas, Circle, DisplayObject, ElementEvent, Group, HTML, Image, Path, 
 import interact from 'interactjs';
 import { disableDragDevice, isCreateLine, disableDragCamera, panelData, type MenuDataItem, chooseDevice } from './data';
 import { v4 as uuidv4 } from 'uuid';
+import { pathDefaultStyle, polyLineDefaultStyle } from './attr';
 
 /**
  * @description: 给图片元素添加鼠标移入高亮
@@ -82,7 +83,7 @@ function addDragToImgGroup(canvas: Canvas, el: any) {
     onend: function (event) {
       if(disableDragDevice.value) return;
 
-      console.log('%c [ event ]-67', 'font-size:13px; background:#afb2d7; color:#f3f6ff;', event);
+      // console.log('%c [ event ]-67', 'font-size:13px; background:#afb2d7; color:#f3f6ff;', event);
       // 恢复画布移动
       setTimeout(() => {
         disableDragCamera.value = false;
@@ -131,7 +132,7 @@ function customContextMenu(canvas: Canvas, el: DisplayObject, menuData: MenuData
       const items = document.querySelectorAll('#antVGContextMenu .context-menu__item');
       for(const item of items) {
         item.addEventListener('click', (e: any) => {
-          console.log('%c [ e ]-133', 'font-size:13px; background:#3277e3; color:#76bbff;', e);
+          // console.log('%c [ e ]-133', 'font-size:13px; background:#3277e3; color:#76bbff;', e);
           const menuKey = e.target.dataset.key;
           const menuItem = menuData.find(item => item.key === menuKey);
           menuItem?.clickHandle(menuItem.clickParam);
@@ -179,7 +180,6 @@ function createImgEntity(canvas: Canvas, param: {
   group.setPosition(param.x, param.y);
   group.translate(-width/2, -height/2);
   group.setOrigin(width/2, height/2);
-  console.log('%c [ param.rotate ]-184', 'font-size:13px; background:#611893; color:#a55cd7;', param.innerRotate);
 
   // 内部加个box做旋转
   const groupInner = new Group({
@@ -205,26 +205,31 @@ function createImgEntity(canvas: Canvas, param: {
   })
   groupInner.appendChild(box);
 
-  let imageEntity: DisplayObject = new Image({
-    name: 'imgBox__img',
-    className: 'imgBox__img imgBox__contentIcon',
-    style: {
-      width: param.width,
-      height: param.height,
-      src: param.src,
-    },
-  });
+  let imageEntity: DisplayObject;
   if(param.path) {
     imageEntity = new Path({
       name: 'imgBox__path',
       className: 'imgBox__path imgBox__contentIcon',
       style: {
         d: param.path,
-        fill: param.color ?? '#54BECC',
+        fill: param.color ?? pathDefaultStyle.fill,
         // cursor: 'pointer',
       },
     });
+    group.className += ' pathEntityBox'
+  } else {
+    imageEntity = new Image({
+      name: 'imgBox__img',
+      className: 'imgBox__img imgBox__contentIcon',
+      style: {
+        width: param.width,
+        height: param.height,
+        src: param.src,
+      },
+    })
+    group.className += ' imgEntityBox'
   }
+
 
   imageEntity.translateLocal(imgPadding, imgPadding)
   groupInner.appendChild(imageEntity);
@@ -395,11 +400,10 @@ function createLine(canvas: Canvas, param?: {
     name: 'line',
     class: 'line',
     style: {
+      ...polyLineDefaultStyle,
+      lineDash: polyLineDefaultStyle.isDash? [polyLineDefaultStyle.dashLen, polyLineDefaultStyle.dashGap]: 0,
       points: JSON.parse(JSON.stringify(lineCoords)),
-      stroke: '#1890FF',
-      lineWidth: 10,
       cursor: 'pointer',
-      // lineDash: [4, 4],
       ...param?.style,
     },
   });
@@ -411,7 +415,6 @@ function createLine(canvas: Canvas, param?: {
   // 鼠标左键点击一下记下一个点的坐标，鼠标双击完成绘制
   let perTapTime = new Date();
   const clickHandle = (event: any) => {
-    console.log('click')
 
     // 两次点击的时间少于500ms判断为双击
     const nowTapTime = new Date();
@@ -514,6 +517,7 @@ function createLine(canvas: Canvas, param?: {
  * @description: 给管道添加可拖拽节点
  */
 function addDragNodePointToLine(canvas: Canvas, polyline: Polyline) {
+
   const nodePoints: Circle [] = [];
 
   for(let i = 0; i<polyline.style.points.length; i++) {
@@ -523,10 +527,10 @@ function addDragNodePointToLine(canvas: Canvas, polyline: Polyline) {
       name: 'lineNodePoint',
       className: 'lineNodePoint chooseView '+i,
       style: {
-        r: 10,
+        r: polyLineDefaultStyle.lineWidth,
         cx: point[0],
         cy: point[1],
-        fill: '#1890FF',
+        fill: polyLineDefaultStyle.stroke,
         opacity: 0.5,
         pointerEvents: 'all',
         // visibility: 'hidden'
@@ -571,7 +575,7 @@ function addDragNodePointToLine(canvas: Canvas, polyline: Polyline) {
         onend: function (event) {
           if(disableDragDevice.value) return;
     
-          console.log('%c [ event ]-67', 'font-size:13px; background:#afb2d7; color:#f3f6ff;', event);
+          // console.log('%c [ event ]-67', 'font-size:13px; background:#afb2d7; color:#f3f6ff;', event);
           // 恢复画布移动
           setTimeout(() => {
             disableDragCamera.value = false;

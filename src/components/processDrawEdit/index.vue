@@ -2,7 +2,7 @@
  * @Author: Strayer
  * @Date: 2025-04-15
  * @LastEditors: Strayer
- * @LastEditTime: 2025-04-18
+ * @LastEditTime: 2025-04-22
  * @Description: 
  * @FilePath: \processDraw\src\components\processDrawEdit\index.vue
 -->
@@ -22,6 +22,7 @@
       />
     </div>
     <IconPanel :canvas="canvas"/>
+    <Attr />
   </div>
 </template>
 
@@ -32,6 +33,7 @@ import { onMounted, shallowRef } from 'vue';
 import { addNode1, addNode2, addLine, addWheel, moveCamera,  } from './';
 import interact from 'interactjs';
 import { createImgEntity, imgDropHandle } from './comm';
+import Attr from './attr.vue'
 
 import IconPanel  from './iconPanel.vue';
 import { initData } from './data';
@@ -77,9 +79,6 @@ async function  initCanvas() {
     width: 447,
     height: 110,
   });
-
-  // console.log('%c [ canvas.getCamera().getPosition() ]-110', 'font-size:13px; background:#3d6a2b; color:#81ae6f;', canvas.getCamera().getPosition());
-  // console.log(canvas.getConfig().width)
 }
 </script>
 

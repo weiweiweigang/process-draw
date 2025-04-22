@@ -1,5 +1,39 @@
 import type { DisplayObject } from "@antv/g";
 import { ref, shallowRef } from "vue";
+import { showAttrPanel, } from "./attr";
+
+// 表单选项公共组件数据格式
+export interface FormItemType {
+  label: string,
+  key: string,
+  component?: 'select' | 'switch' | 'radio' | 'color', //所使用的组件 默认Input
+  disabled?: true, //是否禁止编辑
+  width?: number,
+  customValue?: (value: any) => any, //如果值需要特殊转换,把特殊转换的方法写在这里,注意：该值应该禁止编辑
+  // -----input-----------
+  inputType?: string, // input类型： 'number' 'text' 
+  // ---------select-----
+  selectOption?: Array<{
+    dictValue: number | string,
+    dictLabel: string,
+  }>
+  // ---------switch----
+  switchActiveValue?: number | string
+  switchInactiveValue?: number | string
+  // ---------radio-----
+  radioOption?: Array<{
+    dictValue: number | string,
+    dictLabel: string,
+  }>
+  // color
+  showAlpha?: boolean, // 是否显示透明度
+
+  // 是否必填
+  required?: boolean,
+
+  // 是否隐藏该项
+  hidden?: (value: any) => boolean,
+}
 
 // 右键菜单数据类型
 export type MenuDataItem = {
@@ -181,4 +215,5 @@ export const initData = () => {
   isCreateLine.value = false;
   disableDragDevice.value = false;
   chooseDevice.value = undefined;
+  showAttrPanel.value = false;
 };
