@@ -11,6 +11,7 @@ import interact from 'interactjs';
 import { disableDragDevice, isCreateLine, disableDragCamera, panelData, type MenuDataItem, chooseDevice } from './data';
 import { v4 as uuidv4 } from 'uuid';
 import { pathDefaultStyle, polyLineDefaultStyle } from './attr';
+import Hammer from 'hammerjs';
 
 /**
  * @description: 给图片元素添加鼠标移入高亮
@@ -100,8 +101,9 @@ function customContextMenu(canvas: Canvas, el: DisplayObject, menuData: MenuData
     // e.preventDefault(); // 阻止浏览器默认的右键菜单
     // e.stopPropagation(); // 阻止事件传播
     console.log('%c [ el ]-90', 'font-size:13px; background:#f62979; color:#ff6dbd;', el.id);
+    const zoom = canvas.getCamera().getZoom();
     
-    const point = client2Canvas(canvas, [e.clientX+10, e.clientY]);
+    const point = client2Canvas(canvas, [e.clientX+ 10, e.clientY]);
 
     let innerHtml = `<div class="context-menu">`
     for(const item of menuData) {
@@ -125,6 +127,8 @@ function customContextMenu(canvas: Canvas, el: DisplayObject, menuData: MenuData
             pointerEvents: 'all',
         },
     });
+    html.setLocalScale(1/zoom);
+    html.translateLocal(-50+50/zoom, -50+50/zoom)
     canvas.appendChild(html);
 
     setTimeout(() => {
@@ -822,23 +826,72 @@ function addScaleToEntity(canvas: Canvas, group: DisplayObject) {
   });
 }
 
+/**
+ * @description: 使用鼠标滚轮实现相机缩放
+ */
+function addWheel(canvas: Canvas) {
+  const camera = canvas.getCamera();
+  // 设置最小和最大缩放比例
+  const minZoom = 0;
+  const maxZoom = Infinity;
+  canvas.addEventListener('wheel', (e: any) => {
+      e.preventDefault();
+
+      let zoom = e.deltaY < 0? camera.getZoom()  / 0.95: camera.getZoom() * 0.95;
+      zoom = Math.max(minZoom, Math.min(maxZoom, zoom));
+
+      const { x, y } = canvas.client2Viewport({ x: e.clientX, y: e.clientY });
+
+      camera.setZoomByViewportPoint(zoom, [x, y])
+    }, { passive: false } );
+}
+
+/**
+ * @description: 使用 hammer.js 实现相机移动
+ */
+function moveCamera(canvas: Canvas) {
+  const camera = canvas.getCamera();
+  const hammer = new Hammer(canvas as any);
+
+  let preCoord = [0, 0];
+  hammer.on('panstart', (ev) => {
+    if(disableDragCamera.value) return;
+    preCoord = [ev.deltaX, ev.deltaY];
+  });
+  hammer.on('pan', (ev) => {
+    if(disableDragCamera.value) return;
+
+    // const zoom = Math.pow(2, camera.getZoom()-1); // 如果需要实现类似3d空间的近快远慢 用这个
+    const zoom = camera.getZoom();
+    camera.pan((-ev.deltaX + preCoord[0]) / zoom, (-ev.deltaY + preCoord[1]) / zoom);
+    preCoord = [ev.deltaX, ev.deltaY];
+  });
+
+}
+
 export {
+  // 使用鼠标滚轮实现相机缩放
+  addWheel,
+  // 使用 hammer.js 实现相机移动
+  moveCamera,
+  // 把输入的屏幕坐标转换为画布坐标
+  client2Canvas,
+  // 求一个点伸出的两条线的夹角(带正负)
+  getAngleOfThreePoint,
+
+  // 绘制管道
+  createLine,
+  // 拖拽元件过来新增
+  imgDropHandle,
+  // 新建一个img元素
+  createImgEntity,
+
   // 给图片元素添加鼠标移入高亮
   addEmphaticToImgGroupWhenHover,
   // 给图片元素添加拖拽
   addDragToImgGroup,
   // 给元素添加右键菜单
   customContextMenu,
-  // 新建一个img元素
-  createImgEntity,
-  // 拖拽元件过来新增
-  imgDropHandle,
-  // 把输入的屏幕坐标转换为画布坐标
-  client2Canvas,
-  // 绘制管道
-  createLine,
-  // 求一个点伸出的两条线的夹角(带正负)
-  getAngleOfThreePoint,
   // 给元素添加旋转功能
   addRotateToEntity,
   // 给元素添加缩放功能

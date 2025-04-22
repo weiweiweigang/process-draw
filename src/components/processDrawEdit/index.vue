@@ -28,11 +28,9 @@
 
 <script setup lang="ts">
 import { Renderer } from '@antv/g-canvas';
-import { Canvas, Image, FederatedEvent } from '@antv/g';
+import { Canvas } from '@antv/g';
 import { onMounted, shallowRef } from 'vue';
-import { addNode1, addNode2, addLine, addWheel, moveCamera,  } from './';
-import interact from 'interactjs';
-import { createImgEntity, imgDropHandle } from './comm';
+import { createImgEntity, imgDropHandle,addWheel, moveCamera } from './comm';
 import Attr from './attr.vue'
 
 import IconPanel  from './iconPanel.vue';
