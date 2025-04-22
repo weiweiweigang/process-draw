@@ -174,3 +174,172 @@ export function getPathAttr(el: DisplayObject) {
     formObj,
   }
 }
+
+/**
+ * @description: 文本框默认样式
+ */
+export const textDefaultStyle: {
+  box: {[key: string]: any},
+  text: {[key: string]: any}
+} = {
+  box: {
+    width: 60,
+    height: 24,
+    fill: '#0E2C46',
+    lineWidth: 0,
+    stroke: '#0E2C46',
+    radius: 0,
+  },
+  text: {
+    text: '文字内容',
+    fontSize: 14,
+    fill: '#ff0',
+    fontWeight: 'normal',
+    textAlign: 'start',
+    lineHeight: 24,
+    letterSpacing: 0,
+    dx: 12,
+    dy: 8,
+  }
+}
+
+/**
+ * @description: 获取文字的样式属性和表单选项
+ * @param {Polyline} el
+ */
+export function getTextAttr(el: DisplayObject) {
+  const formObj: {[key: string]: any} = {}
+
+  for(const key of Object.keys(textDefaultStyle.text)) {
+    formObj['text'+key] = el.querySelector('.textBox__text')?.style[key] ?? textDefaultStyle.text[key]
+  }
+
+  for(const key of Object.keys(textDefaultStyle.box)) {
+    formObj['box'+key] = el.querySelector('.textBox__rect')?.style[key] ?? textDefaultStyle.box[key]
+  }
+  formObj.boxwidth = formObj.boxwidth - formObj.textdx * 2;
+  formObj.boxheight = formObj.boxheight - formObj.textdy * 2;
+
+  console.log('%c [ formObj ]-57', 'font-size:13px; background:#c484a1; color:#ffc8e5;', formObj);
+
+
+  const options: {
+    groupTitle: string;
+    formOptions: FormItemType[];
+  }[] = [{
+    groupTitle: '盒子',
+    formOptions: [
+      {
+        key:'boxwidth',
+        label: '宽度',
+        inputType: 'number',
+      },
+      {
+        key:'boxheight',
+        label: '高度',
+        inputType: 'number',
+      },
+      {
+        key: 'boxfill',
+        label: '背景颜色',
+        component: 'color',
+      },
+      {
+        key:'boxlineWidth',
+        label: '边框宽度',
+        inputType: 'number',
+      },
+      {
+        key: 'boxstroke',
+        label: '边框颜色',
+        component: 'color',
+      },
+      {
+        key: 'boxradius',
+        label: '边框圆角',
+        inputType: 'number',
+      },
+    ]
+  }, {
+    groupTitle: '文本',
+    formOptions: [
+      {
+        key:'texttext',
+        label: '文本内容',
+      },
+      {
+        key:'textfontSize',
+        label: '字号大小',
+        inputType: 'number',
+      },
+      {
+        key: 'textfill',
+        label: '字体颜色',
+        component: 'color',
+      },
+      {
+        key:'textfontWeight',
+        label: '字体粗细',
+        component:'select',
+        selectOption: [
+          {
+            dictValue: 'normal',
+            dictLabel: '正常',
+          },
+          {
+            dictValue: 'bold',
+            dictLabel: '加粗',
+          },
+          {
+            dictValue: 'lighter',
+            dictLabel: '变细',
+          },
+        ]
+      },
+      // {
+      //   key:'texttextAlign',
+      //   label: '水平对齐',
+      //   component:'select',
+      //   selectOption: [
+      //     {
+      //       dictValue: 'start',
+      //       dictLabel: '左对齐',
+      //     },
+      //     {
+      //       dictValue: 'center',
+      //       dictLabel: '居中',
+      //     },
+      //     {
+      //       dictValue: 'end',
+      //       dictLabel: '右对齐',
+      //     },
+      //   ]
+      // },
+      {
+        key:'textlineHeight',
+        label: '行高',
+        inputType: 'number',
+      },
+      {
+        key:'textletterSpacing',
+        label: '字符间距',
+        inputType: 'number',
+      },
+      {
+        key:'textdx',
+        label: '左右内边距',
+        inputType: 'number',
+      },
+      {
+        key:'textdy',
+        label: '上下内边距',
+        inputType: 'number',
+      },
+    ]
+  }]
+
+  return {
+    options,
+    formObj,
+  }
+}

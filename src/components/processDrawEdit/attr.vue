@@ -46,10 +46,10 @@
 
 <script setup lang="ts">
 import { watch, ref } from 'vue'
-import { attrFormOptions, attrForm, showAttrPanel, getPolyLineAttr, getPathAttr } from './attr';
+import { attrFormOptions, attrForm, showAttrPanel, getPolyLineAttr, getPathAttr, getTextAttr } from './attr';
 import FormItem from './formItem.vue';
 import { chooseDevice } from './data';
-import { Polyline } from '@antv/g';
+import { Polyline, DisplayObject, Rect, Text } from '@antv/g';
 
 const isPanelCollapsed = ref(false);
 
@@ -72,6 +72,9 @@ watch(() => chooseDevice.value, (value) => {
     } else if(chooseDevice.value?.name === 'imgBox' && chooseDevice.value?.classList[1] === 'pathEntityBox') {
       attrFormOptions.value = getPathAttr(chooseDevice.value).options;
       attrForm.value = getPathAttr(chooseDevice.value).formObj;
+    } else if(chooseDevice.value?.name === 'textBox') {
+      attrFormOptions.value = getTextAttr(chooseDevice.value).options;
+      attrForm.value = getTextAttr(chooseDevice.value).formObj;
     } else {
       attrFormOptions.value = [];
       attrForm.value = {};
@@ -86,13 +89,15 @@ function  cancel() {
     attrForm.value = getPolyLineAttr(chooseDevice.value as Polyline).formObj;
   } else if(chooseDevice.value?.name === 'imgBox' && chooseDevice.value?.classList[1] === 'pathEntityBox') {
     attrForm.value = getPathAttr(chooseDevice.value).formObj;
+  } else if(chooseDevice.value?.name === 'textBox') {
+    attrForm.value = getTextAttr(chooseDevice.value).formObj;
   } else {
     attrForm.value = {};
   }
 }
 
 function onSubmit() {
-  // console.log('%c [ chooseDevice.value ]-96', 'font-size:13px; background:#5d7877; color:#a1bcbb;', chooseDevice.value);
+  console.log('%c [ chooseDevice.value?.name  ]-114', 'font-size:13px; background:#42405f; color:#8684a3;', chooseDevice.value?.name );
 
   if(chooseDevice.value?.name === 'line') {
     chooseDevice.value.style.stroke = attrForm.value.stroke;
@@ -104,6 +109,35 @@ function onSubmit() {
     const pathEntity = chooseDevice.value.querySelector('.imgBox__path')
     if(pathEntity) {
       pathEntity.style.fill = attrForm.value.fill;
+    }
+  }  else if(chooseDevice.value?.name === 'textBox') {
+    const textBoxEntity = chooseDevice.value.querySelector('.textBox__rect') as Rect;
+    if(textBoxEntity) {
+      const width = attrForm.value.boxwidth + attrForm.value.textdx * 2;
+      const height = attrForm.value.boxheight + attrForm.value.textdy * 2;
+
+      chooseDevice.value.setOrigin(width / 2, height / 2);
+
+      (chooseDevice.value.querySelector('.textBox__inner') as DisplayObject)?.setOrigin(width / 2, height / 2);
+
+      textBoxEntity.style.width = width;
+      textBoxEntity.style.height = height;
+      textBoxEntity.style.fill = attrForm.value.boxfill;
+      textBoxEntity.style.lineWidth = attrForm.value.boxlineWidth;
+      textBoxEntity.style.stroke = attrForm.value.boxstroke;
+      textBoxEntity.style.radius = attrForm.value.boxradius;
+
+      const textEntity = chooseDevice.value.querySelector('.textBox__text') as Text;
+      textEntity.style.text = attrForm.value.texttext;
+      textEntity.style.fontSize = attrForm.value.textfontSize;
+      textEntity.style.fill = attrForm.value.textfill;
+      textEntity.style.fontWeight = attrForm.value.textfontWeight;
+      textEntity.style.textAlign = attrForm.value.texttextAlign;
+      textEntity.style.lineHeight = attrForm.value.textlineHeight;
+      textEntity.style.letterSpacing = attrForm.value.textletterSpacing;
+      textEntity.style.dx = attrForm.value.textdx;
+      textEntity.style.dy = attrForm.value.textdy;
+      textEntity.style.wordWrapWidth = attrForm.value.boxwidth;
     }
   }
 }

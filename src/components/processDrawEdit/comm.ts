@@ -6,11 +6,11 @@
  * @Description: 
  * @FilePath: \processDraw\src\components\processDrawEdit\comm.ts
  */
-import { Canvas, Circle, DisplayObject, ElementEvent, Group, HTML, Image, Path, Polyline, Rect, type ImageStyleProps } from '@antv/g';
+import { Canvas, Circle, DisplayObject, Text, ElementEvent, Group, HTML, Image, Path, Polyline, Rect, type ImageStyleProps } from '@antv/g';
 import interact from 'interactjs';
 import { disableDragDevice, isCreateLine, disableDragCamera, panelData, type MenuDataItem, chooseDevice } from './data';
 import { v4 as uuidv4 } from 'uuid';
-import { pathDefaultStyle, polyLineDefaultStyle } from './attr';
+import { pathDefaultStyle, polyLineDefaultStyle, textDefaultStyle } from './attr';
 import Hammer from 'hammerjs';
 
 /**
@@ -345,18 +345,23 @@ function updateImgEntityWidth(canvas: Canvas, group: DisplayObject) {
  */
 function imgDropHandle(canvas: Canvas, event:any) {
   event.preventDefault();
+  const point = client2Canvas(canvas, [event.clientX, event.clientY])
   
   const data = event.dataTransfer.getData('Text');
   const item = panelData.value.find(item => item.key === data);
   console.log('%c [ item ]-160', 'font-size:13px; background:#000; color:#fdffcd;', item);
   if(item) {
-    const point = client2Canvas(canvas, [event.clientX, event.clientY])
 
     createImgEntity(canvas, {
       ...item,
       x: point.x,
       y: point.y,
       src: '/static/processDrawEdit/'+item.img,
+    })
+  } else if(data === 'text') {
+    addTextBox(canvas, {
+      x: point.x,
+      y: point.y,
     })
   }
 }
@@ -869,6 +874,110 @@ function moveCamera(canvas: Canvas) {
 
 }
 
+/**
+ * @description: 添加文本框
+ */
+function addTextBox(canvas: Canvas, param: {
+  id?: string,
+
+  x: number,
+  y: number,
+}) {
+  const width = textDefaultStyle.box.width + textDefaultStyle.text.dx * 2;
+  const height = textDefaultStyle.box.height + textDefaultStyle.text.dy * 2;
+
+  const group = new Group({
+    id: param.id ?? uuidv4(),
+    name: 'textBox',
+    className: 'textBox',
+    style: {
+      cursor: 'pointer',
+    }
+  });
+  group.setPosition(param.x, param.y);
+  group.translate(-width/2, -height/2);
+  group.setOrigin(width/2, height/2);
+
+  // 内部加个box做旋转
+  const groupInner = new Group({
+    name: 'textBox__inner',
+    className: 'textBox__inner',
+  });
+  groupInner.setOrigin(width/2, height/2);
+  if(textDefaultStyle.box.rotate) groupInner.setLocalEulerAngles(textDefaultStyle.box.rotate);
+  group.appendChild(groupInner);
+
+  // 用矩形背景框
+  const box = new Rect({
+    name: 'textBox__rect',
+    class: 'textBox__rect',
+    style: {
+      ...textDefaultStyle.box,
+      width: width,
+      height: height,
+    }
+  })
+  groupInner.appendChild(box);
+
+  const textEntity = new Text({
+    name: 'textBox__text',
+    class: 'textBox__text',
+    style: {
+      ...textDefaultStyle.text,
+      text: textDefaultStyle.text.text,
+      textBaseline: 'top',
+      wordWrap: true,
+      wordWrapWidth: textDefaultStyle.box.width,
+    }
+  })
+
+  groupInner.appendChild(textEntity);
+
+  canvas.appendChild(group);
+
+  // 高亮
+  addEmphaticToImgGroupWhenHover(group);
+
+  // 拖拽, 已添加到画布时前提
+  addDragToImgGroup(canvas, group)
+}
+
+
+/**
+ * @description: 添加文字Html-暂时不用，因为不方便做拖拽
+ */
+function addTextHtml(canvas: Canvas, param: {
+  event:any
+  text?: string,
+}) {
+  const point = client2Canvas(canvas, [param.event.clientX, param.event.clientY])
+  const zoom = canvas.getCamera().getZoom();
+
+  let innerHtml = `
+    <div class="textBox" style="background-color: #0E2C46; color: #fff; padding: 4px 8px;">
+      ${param?.text ?? '文字内容'}
+    </div>
+  `
+  
+  // 自定义右键菜单
+  const html = new HTML({
+      id: uuidv4(),
+      name: 'textBoxHtml',
+      class: 'textBoxHtml',
+      style: {
+          x: point.x,
+          y: point.y,
+          width: 100,
+          height: 100,
+          innerHTML: innerHtml,
+          pointerEvents: 'all',
+      },
+  });
+  html.setLocalScale(1/zoom);
+  html.translateLocal(-50+50/zoom, -50+50/zoom)
+  canvas.appendChild(html);
+}
+
 export {
   // 使用鼠标滚轮实现相机缩放
   addWheel,
@@ -885,13 +994,15 @@ export {
   imgDropHandle,
   // 新建一个img元素
   createImgEntity,
+  // 添加文字
+  addTextBox,
 
+  // 给元素添加右键菜单
+  customContextMenu,
   // 给图片元素添加鼠标移入高亮
   addEmphaticToImgGroupWhenHover,
   // 给图片元素添加拖拽
   addDragToImgGroup,
-  // 给元素添加右键菜单
-  customContextMenu,
   // 给元素添加旋转功能
   addRotateToEntity,
   // 给元素添加缩放功能

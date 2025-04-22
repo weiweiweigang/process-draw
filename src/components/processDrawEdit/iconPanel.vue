@@ -2,7 +2,7 @@
  * @Author: Strayer
  * @Date: 2025-04-15
  * @LastEditors: Strayer
- * @LastEditTime: 2025-04-17
+ * @LastEditTime: 2025-04-22
  * @Description: 元件icon面板
  * @FilePath: \processDraw\src\components\processDrawEdit\iconPanel.vue
 -->
@@ -35,6 +35,17 @@
     </div>
     
     <div v-show="!isPanelCollapsed" class="iconPanel__content">
+      <div
+        class="iconItem"
+        draggable="true"
+        :ondragstart="(event: any) => dragstart(event, {key: 'text'})"
+      >
+        <div class="iconItem__image">
+          <p>文本内容</p>
+        </div>
+        <p class="iconItem__label">文字</p>
+      </div>
+      
       <div 
         v-for="item in panelData" 
         :key="item.key"
