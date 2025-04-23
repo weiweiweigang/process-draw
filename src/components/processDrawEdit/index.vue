@@ -34,10 +34,10 @@ import { Canvas, DisplayObject } from '@antv/g';
 import { onMounted, shallowRef, watch } from 'vue';
 import { createImgEntity, imgDropHandle,addWheel, moveCamera, createLine, createText } from './comm';
 import Attr from './attr.vue'
-import {type ImgDataItem, type lineDataItem, type TextDataItem } from './dataType';
+import {type ImgDataItem, type lineDataItem, type PanelImgType, type TextDataItem } from './dataType';
 
 import IconPanel  from './iconPanel.vue';
-import { imgPadding, initData } from './data';
+import { imgPadding, initData, panelData } from './data';
 
 (window as any).__g_instances__ = [];
 
@@ -46,7 +46,8 @@ const props = defineProps<{
     imgData: ImgDataItem [];
     lineData: lineDataItem [];
     textData: TextDataItem [];
-  }
+  },
+  deviceData: PanelImgType [];
 }>();
 
 const emit = defineEmits<{
@@ -61,6 +62,10 @@ onMounted(() => {
   initData();
   initCanvas();
 })
+
+watch(() => props.deviceData, (val) => {
+  panelData.value = val;
+}, { immediate: true  })
 
 const canvas = shallowRef<Canvas>()
 
