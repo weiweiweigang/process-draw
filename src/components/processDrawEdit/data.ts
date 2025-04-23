@@ -26,6 +26,8 @@ export const imgPadding = 8;
 
 // 当前选中的元件
 export const chooseDevice = shallowRef<DisplayObject>()
+// 当前复制的源对象
+export const copySource = shallowRef<DisplayObject>();
 
 
 export const initData = () => {
@@ -33,5 +35,6 @@ export const initData = () => {
   isCreateLine.value = false;
   disableDragDevice.value = false;
   chooseDevice.value = undefined;
+  copySource.value = undefined;
   showAttrPanel.value = false;
 };

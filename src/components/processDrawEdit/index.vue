@@ -32,12 +32,13 @@
 import { Renderer } from '@antv/g-canvas';
 import { Canvas, DisplayObject } from '@antv/g';
 import { onMounted, shallowRef, watch, onBeforeUnmount } from 'vue';
-import { createImgEntity, imgDropHandle,addWheel, moveCamera, createLine, createText, deleteElement } from './comm';
+import { createImgEntity, imgDropHandle,addWheel, moveCamera, createLine, createText, deleteElement, imgToDataItem, lineToDataItem, textToDataItem, client2Canvas } from './comm';
 import Attr from './attr.vue'
 import {type ImgDataItem, type lineDataItem, type PanelImgType, type TextDataItem } from './dataType';
+import { v4 as uuidv4 } from 'uuid';
 
 import IconPanel  from './iconPanel.vue';
-import { chooseDevice, imgPadding, initData, panelData } from './data';
+import { chooseDevice, copySource, imgPadding, initData, panelData } from './data';
 
 (window as any).__g_instances__ = [];
 
@@ -58,15 +59,21 @@ const emit = defineEmits<{
   }): void;
 }>();
 
+
+
 onMounted(() => {
   initData();
   initCanvas();
   
+  // 键盘按下事件
   document.addEventListener('keydown', keyDownHandle);
+  // 鼠标移动事件
+  document.addEventListener('mousemove', mouseMoveHandle);
 })
 
 onBeforeUnmount(() => {
   document.removeEventListener('keydown', keyDownHandle);
+  document.removeEventListener('mousemove', mouseMoveHandle);
 })
 
 watch(() => props.deviceData, (val) => {
@@ -113,13 +120,13 @@ async function  initCanvas() {
  */
 function  renderData() {
   for(const item of props.canvasData.imgData) {
-    createImgEntity(canvas.value!, item)
+    createImgEntity(canvas.value!, JSON.parse(JSON.stringify(item)))
   }
   for(const item of props.canvasData.lineData) {
-    createLine(canvas.value!, item)
+    createLine(canvas.value!, JSON.parse(JSON.stringify(item)))
   }
   for(const item of props.canvasData.textData) {
-    createText(canvas.value!, item)
+    createText(canvas.value!, JSON.parse(JSON.stringify(item)))
   }
 }
 
@@ -129,107 +136,68 @@ function  renderData() {
 function submitDrawing() {
   console.log('提交绘图');
   const imgEntities = (canvas.value?.document.documentElement.children.filter(item => item.name === 'imgBox') as DisplayObject []) ?? [];
-  const lineEntities = canvas.value?.document.documentElement.children.filter(item => item.name === 'line') ?? [];
-  const textEntities = canvas.value?.document.documentElement.children.filter(item => item.name === 'textBox') ?? [];
+  const lineEntities = (canvas.value?.document.documentElement.children.filter(item => item.name === 'line') as DisplayObject []) ?? [];
+  const textEntities = (canvas.value?.document.documentElement.children.filter(item => item.name === 'textBox') as DisplayObject []) ?? [];
 
-  // 这里可以实现提交逻辑
-  // 组装图片元件数据
-  const imgData: any [] = [];
-  for(const item of imgEntities) {
-    const rectEntity = item.querySelector('.imgBox__rect') as DisplayObject;
-
-    const itemObj: ImgDataItem = {
-      id: item.id,
-      key: item.getAttribute('data-imgKey'),
-      width: rectEntity.style.width - imgPadding * 2,
-      height: rectEntity.style.height - imgPadding * 2,
-      coord: [
-        item.getLocalPosition()[0] + rectEntity.style.width / 2, 
-        item.getLocalPosition()[1] + rectEntity.style.height / 2
-      ],
-      rotate: (item.querySelector('.imgBox__inner') as DisplayObject).getLocalEulerAngles(),
-    }
-
-    if(item.classList[1] === 'pathEntityBox') {
-      itemObj.color = item.querySelector('.imgBox__path')?.style.fill ?? '';
-      itemObj.scale = (item.querySelector('.imgBox__path') as DisplayObject).getLocalScale()[0]
-    }
-    imgData.push(itemObj);
-  }
-
-  // 组装管道数据
-  const lineData: any [] = [];
-  for(const item of lineEntities) {
-    const itemObj: lineDataItem = {
-      id: item.id,
-      angle90: item.getAttribute('data-angle90'),
-      coord: item.style.points,
-      
-      style: {
-        stroke: item.style.stroke,
-        lineWidth: item.style.lineWidth,
-        lineJoin: item.style.lineJoin,
-        lineCap: item.style.lineCap,
-        isDash: item.style.lineDash? 1 : 0,
-        dashLen: (item.style.lineDash as any)?.[0],
-        dashGap: (item.style.lineDash as any)?.[1],
-      }
-    }
-    lineData.push(itemObj);
-  }
-
-  // 组装文字数据
-  const textData: any [] = [];
-  for(const item of textEntities) {
-    const rectEntity = item.querySelector('.textBox__rect') as DisplayObject;
-    const textEntity = item.querySelector('.textBox__text') as DisplayObject;
-
-    const itemObj: TextDataItem = {
-      id: item.id,
-      coord: [
-        (item as DisplayObject).getLocalPosition()[0] + rectEntity.style.width / 2, 
-        (item as DisplayObject).getLocalPosition()[1] + rectEntity.style.height / 2,
-      ],
-      box: {
-        width: rectEntity.style.width,
-        height: rectEntity.style.height,
-        fill: rectEntity.style.fill,
-        lineWidth: rectEntity.style.lineWidth,
-        stroke: rectEntity.style.stroke,
-        radius: rectEntity.style.radius,
-      },
-      text: {
-        text: textEntity.style.text,
-        fontSize: textEntity.style.fontSize,
-        fill: textEntity.style.fill,
-        fontWeight: textEntity.style.fontWeight,
-        textAlign: textEntity.style.textAlign,
-        lineHeight: textEntity.style.lineHeight,
-        letterSpacing: textEntity.style.letterSpacing,
-        dx: textEntity.style.dx,
-        dy: textEntity.style.dy,
-      }
-    }
-    itemObj.box.width -= itemObj.text.dx * 2;
-    itemObj.box.height -= itemObj.text.dy * 2;
-    textData.push(itemObj);
-  }
   const resData = {
-    imgData,
-    lineData,
-    textData,
+    imgData: imgEntities.map(item => imgToDataItem(item)),
+    lineData: lineEntities.map(item => lineToDataItem(item)),
+    textData: textEntities.map(item => textToDataItem(item)),
   }
 
   emit('submit', resData);
 }
 
 /**
+ * @description: 随时记录鼠标信息
+ */
+// 最后一次鼠标信息
+const lastMouseEvent = shallowRef<MouseEvent>()
+function mouseMoveHandle(event: MouseEvent) {
+  lastMouseEvent.value = event;
+}
+
+/**
  * @description: 键盘按下事件
  */
 function  keyDownHandle(event: KeyboardEvent) {
+  console.log('%c [ event ]-230', 'font-size:13px; background:#9897c7; color:#dcdbff;', event);
   if(event.code === 'Delete') {
+    // 删除
     if(['imgBox', 'line', 'textBox'].includes(chooseDevice.value?.name ?? '')) {
       deleteElement(canvas.value!, chooseDevice.value?.id ?? '')
+    }
+  } else if(event.code === 'KeyC' && event.ctrlKey) {
+    // 复制
+    if(chooseDevice.value) copySource.value = chooseDevice.value;
+  } else if(event.code === 'KeyV' && event.ctrlKey) {
+    // 粘贴
+    if(copySource.value?.name === 'imgBox') {
+      const newElement = imgToDataItem(copySource.value);
+      newElement.id = uuidv4();
+
+      const point = client2Canvas(canvas.value!, [lastMouseEvent.value?.clientX ?? 0, lastMouseEvent.value?.clientY ?? 0])
+      newElement.coord = [point.x, point.y];
+      
+      createImgEntity(canvas.value!, newElement)
+    } else if(copySource.value?.name === 'line') {
+      const newElement = lineToDataItem(copySource.value);
+      newElement.id = uuidv4();
+
+      const point = client2Canvas(canvas.value!, [lastMouseEvent.value?.clientX ?? 0, lastMouseEvent.value?.clientY ?? 0])
+      const originBeginPoint = newElement.coord[0];
+      const offset = [point.x - originBeginPoint[0], point.y - originBeginPoint[1]];
+      newElement.coord = newElement.coord.map( item => [item[0] + offset[0], item[1] + offset[1]])
+      
+      createLine(canvas.value!, newElement)
+    } else if(copySource.value?.name === 'textBox') {
+      const newElement = textToDataItem(copySource.value);
+      newElement.id = uuidv4();
+
+      const point = client2Canvas(canvas.value!, [lastMouseEvent.value?.clientX ?? 0, lastMouseEvent.value?.clientY ?? 0])
+      newElement.coord = [point.x, point.y];
+      
+      createText(canvas.value!, newElement)
     }
   }
 }

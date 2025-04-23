@@ -12,7 +12,7 @@ import { disableDragDevice, isCreateLine, disableDragCamera, panelData, chooseDe
 import { v4 as uuidv4 } from 'uuid';
 import { pathDefaultStyle, polyLineDefaultStyle, textDefaultStyle } from './attr';
 import Hammer from 'hammerjs';
-import type { MenuDataItem, lineDataItem, TextDataItem } from './dataType';
+import type { MenuDataItem, lineDataItem, TextDataItem, ImgDataItem } from './dataType';
 import { getImgContextMenuData, getLineContextMenuData } from './contextMenu';
 
 /**
@@ -171,17 +171,7 @@ function customContextMenu(canvas: Canvas, el: DisplayObject, menuData: MenuData
 /**
  * @description: 新建一个img元素
  */
-function createImgEntity(canvas: Canvas, param: {
-  id?: string,
-  key: string,
-  width: number,
-  height: number,
-  coord: [number, number],
-  rotate?: number,
-
-  color?: string,
-  scale?: number,
-}) {
+function createImgEntity(canvas: Canvas, param: ImgDataItem) {
   const deviceItem = panelData.value.find(item => item.key === param.key)!;
   const width = param.width + imgPadding * 2;
   const height = param.height + imgPadding * 2;
@@ -322,6 +312,7 @@ function imgDropHandle(canvas: Canvas, event:any) {
 
     createImgEntity(canvas, {
       ...item,
+      id: uuidv4(),
       coord: [point.x, point.y],
     })
   } else if(data === 'text') {
@@ -964,6 +955,94 @@ function deleteElement(canvas: Canvas, id: string) {
   canvas.document.querySelector('#'+id)?.remove();
 }
 
+/**
+ * @description: img元素转外部数据
+ */
+function imgToDataItem(el: DisplayObject): ImgDataItem {
+  const rectEntity = el.querySelector('.imgBox__rect') as DisplayObject;
+
+  const itemObj: ImgDataItem = {
+    id: el.id,
+    key: el.getAttribute('data-imgKey'),
+    width: rectEntity.style.width - imgPadding * 2,
+    height: rectEntity.style.height - imgPadding * 2,
+    coord: [
+      el.getLocalPosition()[0] + rectEntity.style.width / 2, 
+      el.getLocalPosition()[1] + rectEntity.style.height / 2
+    ],
+    rotate: (el.querySelector('.imgBox__inner') as DisplayObject).getLocalEulerAngles(),
+  }
+
+  if(el.classList[1] === 'pathEntityBox') {
+    itemObj.color = el.querySelector('.imgBox__path')?.style.fill ?? '';
+    itemObj.scale = (el.querySelector('.imgBox__path') as DisplayObject).getLocalScale()[0]
+  }
+
+  return JSON.parse(JSON.stringify(itemObj))
+}
+
+/**
+ * @description: 管道元素转为外部数据
+ */
+function lineToDataItem(el: DisplayObject): lineDataItem {
+  const itemObj: lineDataItem = {
+    id: el.id,
+    angle90: el.getAttribute('data-angle90'),
+    coord: el.style.points,
+    
+    style: {
+      stroke: el.style.stroke,
+      lineWidth: el.style.lineWidth,
+      lineJoin: el.style.lineJoin,
+      lineCap: el.style.lineCap,
+      isDash: el.style.lineDash? 1 : 0,
+      dashLen: (el.style.lineDash as any)?.[0],
+      dashGap: (el.style.lineDash as any)?.[1],
+    }
+  }
+
+  return JSON.parse(JSON.stringify(itemObj))
+}
+
+/**
+ * @description: 文本元素转为外部数据
+ */
+function textToDataItem(el: DisplayObject): TextDataItem {
+  const rectEntity = el.querySelector('.textBox__rect') as DisplayObject;
+  const textEntity = el.querySelector('.textBox__text') as DisplayObject;
+
+  const itemObj: TextDataItem = {
+    id: el.id,
+    coord: [
+      (el as DisplayObject).getLocalPosition()[0] + rectEntity.style.width / 2, 
+      (el as DisplayObject).getLocalPosition()[1] + rectEntity.style.height / 2,
+    ],
+    box: {
+      width: rectEntity.style.width,
+      height: rectEntity.style.height,
+      fill: rectEntity.style.fill,
+      lineWidth: rectEntity.style.lineWidth,
+      stroke: rectEntity.style.stroke,
+      radius: rectEntity.style.radius,
+    },
+    text: {
+      text: textEntity.style.text,
+      fontSize: textEntity.style.fontSize,
+      fill: textEntity.style.fill,
+      fontWeight: textEntity.style.fontWeight,
+      textAlign: textEntity.style.textAlign,
+      lineHeight: textEntity.style.lineHeight,
+      letterSpacing: textEntity.style.letterSpacing,
+      dx: textEntity.style.dx,
+      dy: textEntity.style.dy,
+    }
+  }
+  itemObj.box.width -= itemObj.text.dx * 2;
+  itemObj.box.height -= itemObj.text.dy * 2;
+
+  return JSON.parse(JSON.stringify(itemObj))
+}
+
 
 export {
   // 使用鼠标滚轮实现相机缩放
@@ -987,6 +1066,13 @@ export {
   createLine,
   // 添加文字
   createText,
+  
+  // img元素转外部数据
+  imgToDataItem,
+  // 管道元素转为外部数据
+  lineToDataItem,
+  // 文本元素转为外部数据
+  textToDataItem,
 
   // 给元素添加右键菜单
   customContextMenu,

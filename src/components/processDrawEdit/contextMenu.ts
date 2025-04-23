@@ -1,6 +1,6 @@
 import type { Canvas, DisplayObject } from "@antv/g";
 import type { MenuDataItem } from "./dataType";
-import { chooseDevice } from "./data";
+import { chooseDevice, copySource } from "./data";
 import { deleteElement } from "./comm";
 
 /**
@@ -24,6 +24,7 @@ export function getImgContextMenuData(canvas: Canvas, el: DisplayObject) {
       clickParam: el.id,
       clickHandle: (id: string) => {
         console.log('%c [ id ]-212', 'font-size:13px; background:#fff; color:#ff4bff;', id);
+        copySource.value = canvas.document.querySelector(`#${id}`) as DisplayObject;
       },
     },
     {
@@ -32,7 +33,6 @@ export function getImgContextMenuData(canvas: Canvas, el: DisplayObject) {
       icon: '🗑️',
       clickParam: el.id,
       clickHandle: (id: string) => {
-        console.log('%c [ id ]-212', 'font-size:13px; background:#fff; color:#ff4bff;', id);
         deleteElement(canvas, id);
       },
     },
@@ -79,7 +79,6 @@ export function getLineContextMenuData(canvas: Canvas, el: DisplayObject) {
       icon: '🗑️',
       clickParam: el.id,
       clickHandle: (id: string) => {
-        console.log('%c [ id ]-212', 'font-size:13px; background:#fff; color:#ff4bff;', id);
         deleteElement(canvas, id);
       },
     },
@@ -116,7 +115,6 @@ export function getTextContextMenuData(canvas: Canvas, el: DisplayObject) {
       icon: '🗑️',
       clickParam: el.id,
       clickHandle: (id: string) => {
-        console.log('%c [ id ]-212', 'font-size:13px; background:#fff; color:#ff4bff;', id);
         deleteElement(canvas, id);
       },
     },
