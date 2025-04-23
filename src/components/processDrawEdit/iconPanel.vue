@@ -2,7 +2,7 @@
  * @Author: Strayer
  * @Date: 2025-04-15
  * @LastEditors: Strayer
- * @LastEditTime: 2025-04-22
+ * @LastEditTime: 2025-04-23
  * @Description: 元件icon面板
  * @FilePath: \processDraw\src\components\processDrawEdit\iconPanel.vue
 -->
@@ -13,7 +13,7 @@
       <div class="iconPanel__title-row">
         <h3 class="iconPanel__title">元件库</h3>
         <div class="iconPanel__title-buttons">
-          <button @click="submitDrawing" class="iconPanel__button iconPanel__button--primary">
+          <button @click="emit('submitDrawing')" class="iconPanel__button iconPanel__button--primary">
             提交
           </button>
           <button @click="togglePanel" class="iconPanel__toggle">
@@ -22,13 +22,13 @@
         </div>
       </div>
       <div class="iconPanel__tools">
-        <button @click="createLine(canvas!, {angle90: true})" class="iconPanel__button">
+        <button @click="drawLine(canvas!, {angle90: true})" class="iconPanel__button">
           画直角实线
         </button>
-        <button @click="createLine(canvas!, {style: { lineDash: [4, 4] }, angle90: true})" class="iconPanel__button">
+        <button @click="drawLine(canvas!, {style: { lineDash: [4, 4] }, angle90: true})" class="iconPanel__button">
           画直角虚线
         </button>
-        <button @click="createLine(canvas!, {style: { lineDash: [4, 4] } })" class="iconPanel__button">
+        <button @click="drawLine(canvas!, {style: { lineDash: [4, 4] } })" class="iconPanel__button">
           画任意虚线
         </button>
       </div>
@@ -66,7 +66,7 @@
           >
             <path :fill="item.color ?? '#54BECC'" :d="item.path" />
           </svg>
-          <img v-else :src="`/static/processDrawEdit/${item.img}`" :width="item.width>100? 100:item.width" />
+          <img v-else :src="`${item.img}`" :width="item.width>100? 100:item.width" />
         </div>
         <p class="iconItem__label">{{ item.label }}</p>
       </div>
@@ -75,14 +75,18 @@
 </template>
 
 <script setup lang="ts">
-import { shallowRef, ref } from 'vue';
+import { ref } from 'vue';
 import { panelData } from './data';
-import { createLine } from './comm';
+import { drawLine } from './comm';
 import { Canvas } from '@antv/g';
 
 const props = defineProps<{
   canvas?: Canvas,
 }>()
+
+const emit = defineEmits<{
+  (e: 'submitDrawing'): void;
+}>();
 
 const isPanelCollapsed = ref(false);
 
@@ -92,12 +96,6 @@ function togglePanel() {
 
 function dragstart(event: any, item: any) {
   event.dataTransfer.setData('Text', item.key);  
-}
-
-function submitDrawing() {
-  // 提交绘图
-  console.log('提交绘图');
-  // 这里可以实现提交逻辑
 }
 </script>
 

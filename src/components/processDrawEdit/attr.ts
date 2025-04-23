@@ -2,14 +2,14 @@
  * @Author: Strayer
  * @Date: 2025-04-21
  * @LastEditors: Strayer
- * @LastEditTime: 2025-04-22
+ * @LastEditTime: 2025-04-23
  * @Description: 
  * @FilePath: \processDraw\src\components\processDrawEdit\attr.ts
  */
 
-import { ref, shallowRef, watch } from "vue"
-import { chooseDevice, type FormItemType } from "./data"
-import type { DisplayObject, Polyline } from "@antv/g";
+import { ref, shallowRef } from "vue"
+import type { DisplayObject, Polyline, Rect, Text } from "@antv/g";
+import type { FormItemType, lineDataItem, TextDataItem } from "./dataType";
 
 // 是否展示
 export const showAttrPanel = ref(false);
@@ -30,7 +30,7 @@ export const attrForm = ref<{[key: string]: any}>({})
 /**
  * @description: 管道的默认样式
  */
-export const polyLineDefaultStyle: {[key: string]: any} = {
+export const polyLineDefaultStyle: lineDataItem['style'] = {
   stroke: '#1890FF',
   lineWidth: 10,
   lineJoin: 'miter',
@@ -47,14 +47,11 @@ export const polyLineDefaultStyle: {[key: string]: any} = {
 export function getPolyLineAttr(el: Polyline) {
   const formObj: {[key: string]: any} = {}
   for(const key of Object.keys(polyLineDefaultStyle)) {
-    formObj[key] = (el.style as any)[key]?? polyLineDefaultStyle[key]
+    formObj[key] = (el.style as any)[key]?? polyLineDefaultStyle[key as keyof lineDataItem['style']]
   }
   formObj.isDash = el.style.lineDash? 1 : 0;
   formObj.dashLen = (el.style.lineDash as any)?.[0] ?? polyLineDefaultStyle.dashLen;
   formObj.dashGap = (el.style.lineDash as any)?.[1]?? polyLineDefaultStyle.dashGap;
-
-  // console.log('%c [ formObj ]-57', 'font-size:13px; background:#c484a1; color:#ffc8e5;', formObj);
-
 
   const options: {
     groupTitle: string;
@@ -137,23 +134,29 @@ export function getPolyLineAttr(el: Polyline) {
 }
 
 /**
+ * @description: 把样式属性更新到管道上
+ */
+export function updatePolyLineAttr(el: Polyline) {
+  el.style.stroke = attrForm.value.stroke;
+  el.style.lineWidth = attrForm.value.lineWidth;
+  el.style.lineJoin = attrForm.value.lineJoin;
+  el.style.lineCap = attrForm.value.lineCap;
+  el.style.lineDash = attrForm.value.isDash? [attrForm.value.dashLen, attrForm.value.dashGap]: 0;
+}
+
+/**
  * @description: path的默认样式
  */
 export const pathDefaultStyle: {[key: string]: any} = {
   fill: '#3A7A98'
 }
 /**
- * @description: 获取管道的样式属性和表单选项
+ * @description: 获取path的样式属性和表单选项
  * @param {Polyline} el
  */
 export function getPathAttr(el: DisplayObject) {
   const formObj: {[key: string]: any} = {}
-  for(const key of Object.keys(pathDefaultStyle)) {
-    formObj[key] = (el.style as any)[key]?? pathDefaultStyle[key]
-  }
   formObj.fill = el.querySelector('.imgBox__path')?.style.fill ?? pathDefaultStyle.fill;
-
-  // console.log('%c [ formObj ]-57', 'font-size:13px; background:#c484a1; color:#ffc8e5;', formObj);
 
   const options: {
     groupTitle: string;
@@ -174,13 +177,22 @@ export function getPathAttr(el: DisplayObject) {
     formObj,
   }
 }
+/**
+ * @description: 把样式属性更新到path上
+ */
+export function updatePathAttr(el: DisplayObject) {
+  const pathEntity = el.querySelector('.imgBox__path')
+  if(pathEntity) {
+    pathEntity.style.fill = attrForm.value.fill;
+  }
+}
 
 /**
  * @description: 文本框默认样式
  */
 export const textDefaultStyle: {
-  box: {[key: string]: any},
-  text: {[key: string]: any}
+  box: TextDataItem['box'],
+  text: TextDataItem['text']
 } = {
   box: {
     width: 60,
@@ -211,17 +223,14 @@ export function getTextAttr(el: DisplayObject) {
   const formObj: {[key: string]: any} = {}
 
   for(const key of Object.keys(textDefaultStyle.text)) {
-    formObj['text'+key] = el.querySelector('.textBox__text')?.style[key] ?? textDefaultStyle.text[key]
+    formObj['text'+key] = el.querySelector('.textBox__text')?.style[key] ?? textDefaultStyle.text[key as keyof TextDataItem['text']]
   }
 
   for(const key of Object.keys(textDefaultStyle.box)) {
-    formObj['box'+key] = el.querySelector('.textBox__rect')?.style[key] ?? textDefaultStyle.box[key]
+    formObj['box'+key] = el.querySelector('.textBox__rect')?.style[key] ?? textDefaultStyle.box[key as keyof TextDataItem['box']]
   }
   formObj.boxwidth = formObj.boxwidth - formObj.textdx * 2;
   formObj.boxheight = formObj.boxheight - formObj.textdy * 2;
-
-  console.log('%c [ formObj ]-57', 'font-size:13px; background:#c484a1; color:#ffc8e5;', formObj);
-
 
   const options: {
     groupTitle: string;
@@ -296,25 +305,6 @@ export function getTextAttr(el: DisplayObject) {
           },
         ]
       },
-      // {
-      //   key:'texttextAlign',
-      //   label: '水平对齐',
-      //   component:'select',
-      //   selectOption: [
-      //     {
-      //       dictValue: 'start',
-      //       dictLabel: '左对齐',
-      //     },
-      //     {
-      //       dictValue: 'center',
-      //       dictLabel: '居中',
-      //     },
-      //     {
-      //       dictValue: 'end',
-      //       dictLabel: '右对齐',
-      //     },
-      //   ]
-      // },
       {
         key:'textlineHeight',
         label: '行高',
@@ -342,4 +332,38 @@ export function getTextAttr(el: DisplayObject) {
     options,
     formObj,
   }
+}
+
+/**
+ * @description: 把样式属性更新到文字上
+ */
+export function updateTextAttr(el: DisplayObject) {
+  const textBoxEntity = el.querySelector('.textBox__rect') as Rect;
+    if(textBoxEntity) {
+      const width = attrForm.value.boxwidth + attrForm.value.textdx * 2;
+      const height = attrForm.value.boxheight + attrForm.value.textdy * 2;
+
+      el.setOrigin(width / 2, height / 2);
+
+      (el.querySelector('.textBox__inner') as DisplayObject)?.setOrigin(width / 2, height / 2);
+
+      textBoxEntity.style.width = width;
+      textBoxEntity.style.height = height;
+      textBoxEntity.style.fill = attrForm.value.boxfill;
+      textBoxEntity.style.lineWidth = attrForm.value.boxlineWidth;
+      textBoxEntity.style.stroke = attrForm.value.boxstroke;
+      textBoxEntity.style.radius = attrForm.value.boxradius;
+
+      const textEntity = el.querySelector('.textBox__text') as Text;
+      textEntity.style.text = attrForm.value.texttext;
+      textEntity.style.fontSize = attrForm.value.textfontSize;
+      textEntity.style.fill = attrForm.value.textfill;
+      textEntity.style.fontWeight = attrForm.value.textfontWeight;
+      textEntity.style.textAlign = attrForm.value.texttextAlign;
+      textEntity.style.lineHeight = attrForm.value.textlineHeight;
+      textEntity.style.letterSpacing = attrForm.value.textletterSpacing;
+      textEntity.style.dx = attrForm.value.textdx;
+      textEntity.style.dy = attrForm.value.textdy;
+      textEntity.style.wordWrapWidth = attrForm.value.boxwidth;
+    }
 }

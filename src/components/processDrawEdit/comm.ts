@@ -2,16 +2,18 @@
  * @Author: Strayer
  * @Date: 2025-04-15
  * @LastEditors: Strayer
- * @LastEditTime: 2025-04-22
+ * @LastEditTime: 2025-04-23
  * @Description: 
  * @FilePath: \processDraw\src\components\processDrawEdit\comm.ts
  */
-import { Canvas, Circle, DisplayObject, Text, ElementEvent, Group, HTML, Image, Path, Polyline, Rect, type ImageStyleProps } from '@antv/g';
+import { Canvas, Circle, DisplayObject, Text, Group, HTML, Image, Path, Polyline, Rect  } from '@antv/g';
 import interact from 'interactjs';
-import { disableDragDevice, isCreateLine, disableDragCamera, panelData, type MenuDataItem, chooseDevice } from './data';
+import { disableDragDevice, isCreateLine, disableDragCamera, panelData, chooseDevice, imgPadding } from './data';
 import { v4 as uuidv4 } from 'uuid';
 import { pathDefaultStyle, polyLineDefaultStyle, textDefaultStyle } from './attr';
 import Hammer from 'hammerjs';
+import type { MenuDataItem, lineDataItem, TextDataItem } from './dataType';
+import { getImgContextMenuData, getLineContextMenuData } from './contextMenu';
 
 /**
  * @description: 给图片元素添加鼠标移入高亮
@@ -154,22 +156,22 @@ function customContextMenu(canvas: Canvas, el: DisplayObject, menuData: MenuData
     }, 200)
   })
 }
-const imgPadding = 8;
+
 /**
  * @description: 新建一个img元素
  */
 function createImgEntity(canvas: Canvas, param: {
   id?: string,
-  innerRotate?: number,
-
-  x: number,
-  y: number,
-  src: string,
+  key: string,
   width: number,
   height: number,
-  path?: string,
+  coord: [number, number],
+  rotate?: number,
+
   color?: string,
+  scale?: number,
 }) {
+  const deviceItem = panelData.value.find(item => item.key === param.key)!;
   const width = param.width + imgPadding * 2;
   const height = param.height + imgPadding * 2;
 
@@ -181,7 +183,8 @@ function createImgEntity(canvas: Canvas, param: {
       cursor: 'pointer',
     }
   });
-  group.setPosition(param.x, param.y);
+  group.setAttribute('data-imgKey', param.key);
+  group.setPosition(param.coord[0], param.coord[1]);
   group.translate(-width/2, -height/2);
   group.setOrigin(width/2, height/2);
 
@@ -191,7 +194,7 @@ function createImgEntity(canvas: Canvas, param: {
     className: 'imgBox__inner',
   });
   groupInner.setOrigin(width/2, height/2);
-  if(param.innerRotate) groupInner.setLocalEulerAngles(param.innerRotate);
+  if(param.rotate) groupInner.setLocalEulerAngles(param.rotate);
   group.appendChild(groupInner);
 
   // 用矩形做高亮的边框
@@ -210,16 +213,17 @@ function createImgEntity(canvas: Canvas, param: {
   groupInner.appendChild(box);
 
   let imageEntity: DisplayObject;
-  if(param.path) {
+  if(deviceItem.path) {
     imageEntity = new Path({
       name: 'imgBox__path',
       className: 'imgBox__path imgBox__contentIcon',
       style: {
-        d: param.path,
+        d: deviceItem.path,
         fill: param.color ?? pathDefaultStyle.fill,
         // cursor: 'pointer',
       },
     });
+    if(param.scale) imageEntity.setLocalScale(param.scale);
     group.className += ' pathEntityBox'
   } else {
     imageEntity = new Image({
@@ -228,20 +232,20 @@ function createImgEntity(canvas: Canvas, param: {
       style: {
         width: param.width,
         height: param.height,
-        src: param.src,
+        src: deviceItem.img,
       },
     })
-    group.className += ' imgEntityBox'
+    group.className += ' imgEntityBox';
   }
 
 
   imageEntity.translateLocal(imgPadding, imgPadding)
   groupInner.appendChild(imageEntity);
   
+  canvas.appendChild(group);
+
   // 高亮
   addEmphaticToImgGroupWhenHover(group);
-
-  canvas.appendChild(group);
 
   // 拖拽, 已添加到画布时前提
   addDragToImgGroup(canvas, group)
@@ -253,54 +257,7 @@ function createImgEntity(canvas: Canvas, param: {
   addScaleToEntity(canvas, group)
 
   // 自定义右键菜单
-  customContextMenu(canvas, group, [
-    {
-      key: 'edit',
-      label: '编辑',
-      icon: '✏️',
-      clickParam: group.id,
-      clickHandle: (id: string) => {
-        console.log('%c [ id ]-212', 'font-size:13px; background:#fff; color:#ff4bff;', id);
-      },
-    },
-    {
-      key: 'copy',
-      label: '复制',
-      icon: '📋',
-      clickParam: group.id,
-      clickHandle: (id: string) => {
-        console.log('%c [ id ]-212', 'font-size:13px; background:#fff; color:#ff4bff;', id);
-      },
-    },
-    {
-      key: 'delete',
-      label: '删除',
-      icon: '🗑️',
-      clickParam: group.id,
-      clickHandle: (id: string) => {
-        console.log('%c [ id ]-212', 'font-size:13px; background:#fff; color:#ff4bff;', id);
-        canvas.document.querySelector('#'+id)?.remove();
-      },
-    },
-    {
-      key: 'top',
-      label: '置顶',
-      icon: '⬆️',
-      clickParam: group.id,
-      clickHandle: (id: string) => {
-        console.log('%c [ id ]-212', 'font-size:13px; background:#fff; color:#ff4bff;', id);
-      },
-    },
-    {
-      key: 'bottom',
-      label: '置底',
-      icon: '⬇️',
-      clickParam: group.id,
-      clickHandle: (id: string) => {
-        console.log('%c [ id ]-212', 'font-size:13px; background:#fff; color:#ff4bff;', id);
-      },
-    },
-  ])
+  customContextMenu(canvas, group, getImgContextMenuData(canvas, group))
 
   return group;
 }
@@ -354,14 +311,14 @@ function imgDropHandle(canvas: Canvas, event:any) {
 
     createImgEntity(canvas, {
       ...item,
-      x: point.x,
-      y: point.y,
-      src: '/static/processDrawEdit/'+item.img,
+      coord: [point.x, point.y],
     })
   } else if(data === 'text') {
-    addTextBox(canvas, {
-      x: point.x,
-      y: point.y,
+    createText(canvas, {
+      id: uuidv4(),
+      coord: [point.x, point.y],
+      box: textDefaultStyle.box,
+      text: textDefaultStyle.text,
     })
   }
 }
@@ -392,7 +349,7 @@ function client2Canvas(canvas: Canvas, clientPoint: [number, number]) {
  * @description: 绘制管道
  * 鼠标左键点击一下记下一个点的坐标，鼠标双击完成绘制
  */
-function createLine(canvas: Canvas, param?: {
+function drawLine(canvas: Canvas, param?: {
   style?: any,
   angle90?: boolean, // 转角是否必须90度
 }) {
@@ -416,6 +373,8 @@ function createLine(canvas: Canvas, param?: {
       ...param?.style,
     },
   });
+  (polyline as DisplayObject).setAttribute('data-angle90', param?.angle90 ?? false);
+
   console.log('polyline.id:', polyline.id)
 
   // 添加移入高亮效果
@@ -453,55 +412,11 @@ function createLine(canvas: Canvas, param?: {
 
     if(lineCoords.length === 1) {
       canvas.appendChild(polyline);
+      // 添加可拖拽功能
       addDragToImgGroup(canvas, polyline);
-      customContextMenu(canvas, polyline, [
-        {
-          key: 'edit',
-          label: '编辑',
-          icon: '✏️',
-          clickParam: polyline.id,
-          clickHandle: (id: string) => {
-            console.log('%c [ id ]-212', 'font-size:13px; background:#fff; color:#ff4bff;', id);
-          },
-        },
-        {
-          key: 'copy',
-          label: '复制',
-          icon: '📋',
-          clickParam: polyline.id,
-          clickHandle: (id: string) => {
-            console.log('%c [ id ]-212', 'font-size:13px; background:#fff; color:#ff4bff;', id);
-          },
-        },
-        {
-          key: 'delete',
-          label: '删除',
-          icon: '🗑️',
-          clickParam: polyline.id,
-          clickHandle: (id: string) => {
-            console.log('%c [ id ]-212', 'font-size:13px; background:#fff; color:#ff4bff;', id);
-            canvas.document.querySelector('#'+id)?.remove();
-          },
-        },
-        {
-          key: 'top',
-          label: '置顶',
-          icon: '⬆️',
-          clickParam: polyline.id,
-          clickHandle: (id: string) => {
-            console.log('%c [ id ]-212', 'font-size:13px; background:#fff; color:#ff4bff;', id);
-          },
-        },
-        {
-          key: 'bottom',
-          label: '置底',
-          icon: '⬇️',
-          clickParam: polyline.id,
-          clickHandle: (id: string) => {
-            console.log('%c [ id ]-212', 'font-size:13px; background:#fff; color:#ff4bff;', id);
-          },
-        },
-      ])
+      // 添加自定义右键菜单
+      customContextMenu(canvas, polyline, getLineContextMenuData(canvas, polyline))
+    
     }
   };
   canvas.addEventListener('click', clickHandle);
@@ -523,9 +438,47 @@ function createLine(canvas: Canvas, param?: {
 }
 
 /**
+ * @description: 新增管道
+ */
+function createLine(canvas: Canvas, param: lineDataItem) {
+  const polyline = new Polyline({
+    id: param.id,
+    name: 'line',
+    class: 'line',
+    style: {
+      ...polyLineDefaultStyle,
+      ...param.style,
+      lineDash: param.style.isDash? [param.style.dashLen ?? 0, param.style.dashGap ?? 0]: 0,
+      points: param.coord,
+      cursor: 'pointer',
+    },
+  });
+  (polyline as DisplayObject).setAttribute('data-angle90', param?.angle90 ?? false);
+
+  console.log('polyline.id:', polyline.id)
+
+  canvas.appendChild(polyline);
+
+  // 添加移入高亮效果
+  addEmphaticToImgGroupWhenHover(polyline);
+
+  // 添加可拖拽节点
+  addDragNodePointToLine(canvas, polyline, { defaultHidden: true })
+
+  // 添加可拖拽功能
+  addDragToImgGroup(canvas, polyline);
+
+  // 添加自定义右键菜单
+  customContextMenu(canvas, polyline, getLineContextMenuData(canvas, polyline))
+}
+
+
+/**
  * @description: 给管道添加可拖拽节点
  */
-function addDragNodePointToLine(canvas: Canvas, polyline: Polyline) {
+function addDragNodePointToLine(canvas: Canvas, polyline: Polyline, param?: {
+  defaultHidden?: boolean, // 默认隐藏
+}) {
 
   const nodePoints: Circle [] = [];
 
@@ -542,7 +495,7 @@ function addDragNodePointToLine(canvas: Canvas, polyline: Polyline) {
         fill: polyLineDefaultStyle.stroke,
         opacity: 0.5,
         pointerEvents: 'all',
-        // visibility: 'hidden'
+        visibility: param?.defaultHidden? 'hidden': 'visible',
       },
     });
     nodePoints.push(nodePoint)
@@ -575,11 +528,6 @@ function addDragNodePointToLine(canvas: Canvas, polyline: Polyline) {
     
           // 改变节点1位置
           nodePoint.translateLocal(dx / zoom, dy / zoom);
-          // 获取节点1位置
-          // const [nx, ny] = el.getLocalPosition();
-          // 改变边的端点位置
-          // edge.style.x1 = nx;
-          // edge.style.y1 = ny;
         },
         onend: function (event) {
           if(disableDragDevice.value) return;
@@ -757,8 +705,6 @@ function addScaleToEntity(canvas: Canvas, group: DisplayObject) {
 
   innerEntity.appendChild(circle);
 
-  const camera = canvas.getCamera();
-
   let beginStatus = {
     scale: [1, 1, 1] as [number, number, number],
   }
@@ -877,25 +823,20 @@ function moveCamera(canvas: Canvas) {
 /**
  * @description: 添加文本框
  */
-function addTextBox(canvas: Canvas, param: {
-  id?: string,
-
-  x: number,
-  y: number,
-}) {
-  const width = textDefaultStyle.box.width + textDefaultStyle.text.dx * 2;
-  const height = textDefaultStyle.box.height + textDefaultStyle.text.dy * 2;
+function createText(canvas: Canvas, param: TextDataItem) {
+  const width = param.box.width + param.text.dx * 2;
+  const height = param.box.height + param.text.dy * 2;
 
   const group = new Group({
-    id: param.id ?? uuidv4(),
+    id: param.id,
     name: 'textBox',
     className: 'textBox',
     style: {
       cursor: 'pointer',
     }
   });
-  group.setPosition(param.x, param.y);
-  group.translate(-width/2, -height/2);
+  group.setLocalPosition(param.coord[0], param.coord[1]);
+  group.translateLocal(-width/2, -height/2);
   group.setOrigin(width/2, height/2);
 
   // 内部加个box做旋转
@@ -904,7 +845,7 @@ function addTextBox(canvas: Canvas, param: {
     className: 'textBox__inner',
   });
   groupInner.setOrigin(width/2, height/2);
-  if(textDefaultStyle.box.rotate) groupInner.setLocalEulerAngles(textDefaultStyle.box.rotate);
+  // if(param.box.rotate) groupInner.setLocalEulerAngles(param.box.rotate);
   group.appendChild(groupInner);
 
   // 用矩形背景框
@@ -912,7 +853,7 @@ function addTextBox(canvas: Canvas, param: {
     name: 'textBox__rect',
     class: 'textBox__rect',
     style: {
-      ...textDefaultStyle.box,
+      ...param.box,
       width: width,
       height: height,
     }
@@ -923,11 +864,11 @@ function addTextBox(canvas: Canvas, param: {
     name: 'textBox__text',
     class: 'textBox__text',
     style: {
-      ...textDefaultStyle.text,
-      text: textDefaultStyle.text.text,
+      ...param.text,
+      text: param.text.text,
       textBaseline: 'top',
       wordWrap: true,
-      wordWrapWidth: textDefaultStyle.box.width,
+      wordWrapWidth: param.box.width,
     }
   })
 
@@ -940,6 +881,9 @@ function addTextBox(canvas: Canvas, param: {
 
   // 拖拽, 已添加到画布时前提
   addDragToImgGroup(canvas, group)
+
+  // 添加自定义右键菜单
+  customContextMenu(canvas, group, getLineContextMenuData(canvas, group))
 }
 
 
@@ -989,13 +933,15 @@ export {
   getAngleOfThreePoint,
 
   // 绘制管道
+  drawLine,
+  // 新增管道
   createLine,
   // 拖拽元件过来新增
   imgDropHandle,
   // 新建一个img元素
   createImgEntity,
   // 添加文字
-  addTextBox,
+  createText,
 
   // 给元素添加右键菜单
   customContextMenu,

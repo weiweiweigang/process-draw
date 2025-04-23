@@ -1,61 +1,19 @@
 import type { DisplayObject } from "@antv/g";
 import { ref, shallowRef } from "vue";
 import { showAttrPanel, } from "./attr";
-
-// 表单选项公共组件数据格式
-export interface FormItemType {
-  label: string,
-  key: string,
-  component?: 'select' | 'switch' | 'radio' | 'color', //所使用的组件 默认Input
-  disabled?: true, //是否禁止编辑
-  width?: number,
-  customValue?: (value: any) => any, //如果值需要特殊转换,把特殊转换的方法写在这里,注意：该值应该禁止编辑
-  // -----input-----------
-  inputType?: string, // input类型： 'number' 'text' 
-  // ---------select-----
-  selectOption?: Array<{
-    dictValue: number | string,
-    dictLabel: string,
-  }>
-  // ---------switch----
-  switchActiveValue?: number | string
-  switchInactiveValue?: number | string
-  // ---------radio-----
-  radioOption?: Array<{
-    dictValue: number | string,
-    dictLabel: string,
-  }>
-  // color
-  showAlpha?: boolean, // 是否显示透明度
-
-  // 是否必填
-  required?: boolean,
-
-  // 是否隐藏该项
-  hidden?: (value: any) => boolean,
-}
-
-// 右键菜单数据类型
-export type MenuDataItem = {
-  key: string,
-  label: string,
-  icon?: string,
-  data?: any,
-  clickParam: string,
-  clickHandle: (param: string) => void,
-}
+import type { PanelImgType } from "./dataType";
 
 // 元件列表
-export const panelData = shallowRef([
+export const panelData = shallowRef<PanelImgType []>([
   {
     key: 'aqf',
-    img: 'aqf.png',
+    img: '/static/processDrawEdit/aqf.png',
     label: '安全阀',
     width: 38,
     height: 47,
   },{
     key: 'arrow',
-    img: 'arrow.svg',
+    img: '/static/processDrawEdit/arrow.svg',
     label: '箭头',
     width: 21,
     height: 16,
@@ -64,28 +22,28 @@ export const panelData = shallowRef([
   },
   {
     key: 'yb',
-    img: 'yb.png',
+    img: '/static/processDrawEdit/yb.png',
     label: '仪表',
     width: 32,
     height: 49,
   },
   {
     key: 'xsd',
-    img: 'xsd.png',
+    img: '/static/processDrawEdit/xsd.png',
     label: '下水道',
     width: 40,
     height: 40,
   },
   {
     key: 'cqxsc',
-    img: 'cqxsc.png',
+    img: '/static/processDrawEdit/cqxsc.png',
     label: '厂区泄水池',
     width: 447,
     height: 110,
   },
   {
     key: 'ddxhb',
-    img: 'ddxhb.png',
+    img: '/static/processDrawEdit/ddxhb.png',
     label: '电动循环泵',
     width: 102,
     height: 149,
@@ -93,41 +51,41 @@ export const panelData = shallowRef([
   
   {
     key: 'rsq',
-    img: 'rsq.png',
+    img: '/static/processDrawEdit/rsq.png',
     label: '软水器',
     width: 124,
     height: 162,
   },
   {
     key: 'ssb',
-    img: 'ssb.png',
+    img: '/static/processDrawEdit/ssb.png',
     label: '疏水泵',
     width: 93,
     height: 158,
   },
   {
     key: 'sslqq',
-    img: 'sslqq.png',
+    img: '/static/processDrawEdit/sslqq.png',
     label: '疏水冷却器',
     width: 183,
     height: 101,
   },
   {
     key: 'glq',
-    img: 'glq.png',
+    img: '/static/processDrawEdit/glq.png',
     label: '过滤器',
     width: 101,
     height: 61,
   },{
     key: 'jyb',
-    img: 'jyb.png',
+    img: '/static/processDrawEdit/jyb.png',
     label: '加压泵',
     width: 150,
     height: 88,
   },
   {
     key: 'gdyjrq',
-    img: 'gdyjrq.png',
+    img: '/static/processDrawEdit/gdyjrq.png',
     label: '高压/低压加热器',
     width: 242,
     height: 144,
@@ -135,21 +93,21 @@ export const panelData = shallowRef([
   
   {
     key: 'rsx',
-    img: 'rsx.png',
+    img: '/static/processDrawEdit/rsx.png',
     label: '软水箱',
     width: 279,
     height:  218,
   },
   {
     key: 'xqj',
-    img: 'xqj.png',
+    img: '/static/processDrawEdit/xqj.png',
     label: '小汽机',
     width: 182,
     height: 167,
   },
   {
     key: 'cwq',
-    img: 'cwq.png',
+    img: '/static/processDrawEdit/cwq.png',
     label: '除污器',
     width: 85,
     height: 61,
@@ -157,21 +115,21 @@ export const panelData = shallowRef([
 
   {
     key: 'qdxhsb',
-    img: 'qdxhsb.png',
+    img: '/static/processDrawEdit/qdxhsb.png',
     label: '汽动循环水泵',
     width: 123,
     height: 149,
   },
   {
     key: 'bsb',
-    img: 'bsb.png',
+    img: '/static/processDrawEdit/bsb.png',
     label: '补水泵',
     width: 92,
     height: 114,
   },
   {
     key: 'njsg',
-    img: 'njsg.png',
+    img: '/static/processDrawEdit/njsg.png',
     label: '凝结水罐',
     width: 128,
     height: 132,
@@ -179,21 +137,21 @@ export const panelData = shallowRef([
   
   {
     key: 'jz',
-    img: 'jz.png',
+    img: '/static/processDrawEdit/jz.png',
     label: '机组',
     width: 308,
     height: 161,
   },
   {
     key: 'hrq',
-    img: 'hrq.png',
+    img: '/static/processDrawEdit/hrq.png',
     label: '换热器',
     width: 93,
     height: 172,
   },
   {
     key: 'hrq2',
-    img: 'hrq2.png',
+    img: '/static/processDrawEdit/hrq2.png',
     label: '换热器2',
     width: 105,
     height: 171,
@@ -207,8 +165,12 @@ export const isCreateLine = ref(false);
 // 是否禁止拖车所有元件和管道
 export const disableDragDevice = ref(false);
 
+// img图标的内边距
+export const imgPadding = 8;
+
 // 当前选中的元件
 export const chooseDevice = shallowRef<DisplayObject>()
+
 
 export const initData = () => {
   disableDragCamera.value = false;

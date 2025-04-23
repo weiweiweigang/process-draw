@@ -2,7 +2,7 @@
  * @Author: Strayer
  * @Date: 2022-12-09
  * @LastEditors: Strayer
- * @LastEditTime: 2025-04-21
+ * @LastEditTime: 2025-04-23
  * @Description: 表单选项内容封装
 -->
 <template>
@@ -60,7 +60,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
-import type { FormItemType } from "./data"
+import type { FormItemType } from './dataType';
 
 type ValueType = undefined | null | string | number;
 

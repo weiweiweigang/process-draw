@@ -2,7 +2,7 @@
  * @Author: Strayer
  * @Date: 2025-04-21
  * @LastEditors: Strayer
- * @LastEditTime: 2025-04-22
+ * @LastEditTime: 2025-04-23
  * @Description: 
  * @FilePath: \processDraw\src\components\processDrawEdit\attr.vue
 -->
@@ -46,7 +46,7 @@
 
 <script setup lang="ts">
 import { watch, ref } from 'vue'
-import { attrFormOptions, attrForm, showAttrPanel, getPolyLineAttr, getPathAttr, getTextAttr } from './attr';
+import { attrFormOptions, attrForm, showAttrPanel, getPolyLineAttr, getPathAttr, getTextAttr, updatePolyLineAttr, updatePathAttr, updateTextAttr } from './attr';
 import FormItem from './formItem.vue';
 import { chooseDevice } from './data';
 import { Polyline, DisplayObject, Rect, Text } from '@antv/g';
@@ -101,44 +101,11 @@ function onSubmit() {
 
   if(chooseDevice.value?.name === 'line') {
     chooseDevice.value.style.stroke = attrForm.value.stroke;
-    chooseDevice.value.style.lineWidth = attrForm.value.lineWidth;
-    chooseDevice.value.style.lineJoin = attrForm.value.lineJoin;
-    chooseDevice.value.style.lineCap = attrForm.value.lineCap;
-    chooseDevice.value.style.lineDash = attrForm.value.isDash? [attrForm.value.dashLen, attrForm.value.dashGap]: 0;
+    updatePolyLineAttr(chooseDevice.value as Polyline)
   } else if(chooseDevice.value?.name === 'imgBox' && chooseDevice.value?.classList[1] === 'pathEntityBox') {
-    const pathEntity = chooseDevice.value.querySelector('.imgBox__path')
-    if(pathEntity) {
-      pathEntity.style.fill = attrForm.value.fill;
-    }
+    updatePathAttr(chooseDevice.value)
   }  else if(chooseDevice.value?.name === 'textBox') {
-    const textBoxEntity = chooseDevice.value.querySelector('.textBox__rect') as Rect;
-    if(textBoxEntity) {
-      const width = attrForm.value.boxwidth + attrForm.value.textdx * 2;
-      const height = attrForm.value.boxheight + attrForm.value.textdy * 2;
-
-      chooseDevice.value.setOrigin(width / 2, height / 2);
-
-      (chooseDevice.value.querySelector('.textBox__inner') as DisplayObject)?.setOrigin(width / 2, height / 2);
-
-      textBoxEntity.style.width = width;
-      textBoxEntity.style.height = height;
-      textBoxEntity.style.fill = attrForm.value.boxfill;
-      textBoxEntity.style.lineWidth = attrForm.value.boxlineWidth;
-      textBoxEntity.style.stroke = attrForm.value.boxstroke;
-      textBoxEntity.style.radius = attrForm.value.boxradius;
-
-      const textEntity = chooseDevice.value.querySelector('.textBox__text') as Text;
-      textEntity.style.text = attrForm.value.texttext;
-      textEntity.style.fontSize = attrForm.value.textfontSize;
-      textEntity.style.fill = attrForm.value.textfill;
-      textEntity.style.fontWeight = attrForm.value.textfontWeight;
-      textEntity.style.textAlign = attrForm.value.texttextAlign;
-      textEntity.style.lineHeight = attrForm.value.textlineHeight;
-      textEntity.style.letterSpacing = attrForm.value.textletterSpacing;
-      textEntity.style.dx = attrForm.value.textdx;
-      textEntity.style.dy = attrForm.value.textdy;
-      textEntity.style.wordWrapWidth = attrForm.value.boxwidth;
-    }
+    updateTextAttr(chooseDevice.value)
   }
 }
 
