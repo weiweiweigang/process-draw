@@ -6,7 +6,7 @@
  * @Description: 
  * @FilePath: \processDraw\src\components\processDrawEdit\comm.ts
  */
-import { Canvas, Circle, DisplayObject, Text, Group, HTML, Image, Path, Polyline, Rect  } from '@antv/g';
+import { Canvas, Circle, DisplayObject, Text, Group, HTML, Image, Path, Polyline, Rect, ElementEvent  } from '@antv/g';
 import interact from 'interactjs';
 import { disableDragDevice, isCreateLine, disableDragCamera, panelData, chooseDevice, imgPadding } from './data';
 import { v4 as uuidv4 } from 'uuid';
@@ -59,7 +59,7 @@ function addEmphaticToImgGroupWhenHover(el: DisplayObject) {
 function addDragToImgGroup(canvas: Canvas, el: any) {
   const camera = canvas.getCamera();
 
-  interact(el as any, {
+  const interactable = interact(el as any, {
   // 直接传入节点1
     context: canvas.document as any, // 传入上下文
   }).draggable({
@@ -93,6 +93,17 @@ function addDragToImgGroup(canvas: Canvas, el: any) {
       }, 100);
       },
     });
+
+  // 在元素上存储 interactable 引用，以便后续可以销毁
+  el._interactable = interactable;
+
+  // 监听元素销毁事件
+  el.addEventListener(ElementEvent.REMOVED, () => {
+    if (el._interactable) {
+      el._interactable.unset(); // 销毁 interact 实例
+      el._interactable = null;
+    }
+  });
 }
 
 /**
@@ -505,7 +516,7 @@ function addDragNodePointToLine(canvas: Canvas, polyline: Polyline, param?: {
   const camera = canvas.getCamera();
 
   for(const nodePoint of nodePoints) {
-    interact(nodePoint as any, {
+    const interactable =  interact(nodePoint as any, {
       // 直接传入节点1
         context: canvas.document as any, // 传入上下文
       }).draggable({
@@ -539,6 +550,17 @@ function addDragNodePointToLine(canvas: Canvas, polyline: Polyline, param?: {
           }, 100);
         },
       });
+
+    // 在元素上存储 interactable 引用，以便后续可以销毁
+    (nodePoint as any)._interactable = interactable;
+
+    // 监听元素销毁事件
+    nodePoint.addEventListener(ElementEvent.REMOVED, () => {
+      if ((nodePoint as any)._interactable) {
+        (nodePoint as any)._interactable.unset(); // 销毁 interact 实例
+        (nodePoint as any)._interactable = null;
+      }
+    });
   }
 }
 
@@ -640,7 +662,7 @@ function addRotateToEntity(canvas: Canvas, group: DisplayObject) {
   canvas.appendChild(endP);
 
 
-  interact(rotateImg as any, {
+  const interactable = interact(rotateImg as any, {
     // 直接传入节点1
       context: canvas.document as any, // 传入上下文
     }).draggable({
@@ -679,6 +701,17 @@ function addRotateToEntity(canvas: Canvas, group: DisplayObject) {
         }, 100);
       },
     });
+
+  // 在元素上存储 interactable 引用，以便后续可以销毁
+  (rotateImg as any)._interactable = interactable;
+
+  // 监听元素销毁事件
+  (rotateImg as any).addEventListener(ElementEvent.REMOVED, () => {
+    if ((rotateImg as any)._interactable) {
+      (rotateImg as any)._interactable.unset(); // 销毁 interact 实例
+      (rotateImg as any)._interactable = null;
+    }
+  });
 
   return rotateImg;
 }
@@ -922,6 +955,16 @@ function addTextHtml(canvas: Canvas, param: {
   canvas.appendChild(html);
 }
 
+/**
+ * @description: 删除元素
+ */
+function deleteElement(canvas: Canvas, id: string) {
+  if(chooseDevice.value?.id === id) chooseDevice.value= undefined;
+
+  canvas.document.querySelector('#'+id)?.remove();
+}
+
+
 export {
   // 使用鼠标滚轮实现相机缩放
   addWheel,
@@ -932,14 +975,16 @@ export {
   // 求一个点伸出的两条线的夹角(带正负)
   getAngleOfThreePoint,
 
-  // 绘制管道
-  drawLine,
-  // 新增管道
-  createLine,
+  // 删除元素
+  deleteElement,
   // 拖拽元件过来新增
   imgDropHandle,
   // 新建一个img元素
   createImgEntity,
+  // 绘制管道
+  drawLine,
+  // 新增管道
+  createLine,
   // 添加文字
   createText,
 

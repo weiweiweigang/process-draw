@@ -1,5 +1,7 @@
 import type { Canvas, DisplayObject } from "@antv/g";
 import type { MenuDataItem } from "./dataType";
+import { chooseDevice } from "./data";
+import { deleteElement } from "./comm";
 
 /**
  * @description: img元件右键菜单数据
@@ -31,7 +33,7 @@ export function getImgContextMenuData(canvas: Canvas, el: DisplayObject) {
       clickParam: el.id,
       clickHandle: (id: string) => {
         console.log('%c [ id ]-212', 'font-size:13px; background:#fff; color:#ff4bff;', id);
-        canvas.document.querySelector('#'+id)?.remove();
+        deleteElement(canvas, id);
       },
     },
     {
@@ -78,7 +80,7 @@ export function getLineContextMenuData(canvas: Canvas, el: DisplayObject) {
       clickParam: el.id,
       clickHandle: (id: string) => {
         console.log('%c [ id ]-212', 'font-size:13px; background:#fff; color:#ff4bff;', id);
-        canvas.document.querySelector('#'+id)?.remove();
+        deleteElement(canvas, id);
       },
     },
     {
@@ -115,7 +117,7 @@ export function getTextContextMenuData(canvas: Canvas, el: DisplayObject) {
       clickParam: el.id,
       clickHandle: (id: string) => {
         console.log('%c [ id ]-212', 'font-size:13px; background:#fff; color:#ff4bff;', id);
-        canvas.document.querySelector('#'+id)?.remove();
+        deleteElement(canvas, id);
       },
     },
     {

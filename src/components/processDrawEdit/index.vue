@@ -31,13 +31,13 @@
 <script setup lang="ts">
 import { Renderer } from '@antv/g-canvas';
 import { Canvas, DisplayObject } from '@antv/g';
-import { onMounted, shallowRef, watch } from 'vue';
-import { createImgEntity, imgDropHandle,addWheel, moveCamera, createLine, createText } from './comm';
+import { onMounted, shallowRef, watch, onBeforeUnmount } from 'vue';
+import { createImgEntity, imgDropHandle,addWheel, moveCamera, createLine, createText, deleteElement } from './comm';
 import Attr from './attr.vue'
 import {type ImgDataItem, type lineDataItem, type PanelImgType, type TextDataItem } from './dataType';
 
 import IconPanel  from './iconPanel.vue';
-import { imgPadding, initData, panelData } from './data';
+import { chooseDevice, imgPadding, initData, panelData } from './data';
 
 (window as any).__g_instances__ = [];
 
@@ -61,6 +61,12 @@ const emit = defineEmits<{
 onMounted(() => {
   initData();
   initCanvas();
+  
+  document.addEventListener('keydown', keyDownHandle);
+})
+
+onBeforeUnmount(() => {
+  document.removeEventListener('keydown', keyDownHandle);
 })
 
 watch(() => props.deviceData, (val) => {
@@ -69,6 +75,9 @@ watch(() => props.deviceData, (val) => {
 
 const canvas = shallowRef<Canvas>()
 
+/**
+ * @description: 初始化画布
+ */
 async function  initCanvas() {
   // 实例化渲染器和画布
   const renderer = new Renderer();
@@ -100,7 +109,7 @@ async function  initCanvas() {
 }
 
 /**
- * @description: 这里获取到服务端的元件数据后在去加载
+ * @description: 渲染外部数据
  */
 function  renderData() {
   for(const item of props.canvasData.imgData) {
@@ -212,6 +221,17 @@ function submitDrawing() {
   }
 
   emit('submit', resData);
+}
+
+/**
+ * @description: 键盘按下事件
+ */
+function  keyDownHandle(event: KeyboardEvent) {
+  if(event.code === 'Delete') {
+    if(['imgBox', 'line', 'textBox'].includes(chooseDevice.value?.name ?? '')) {
+      deleteElement(canvas.value!, chooseDevice.value?.id ?? '')
+    }
+  }
 }
 </script>
 
