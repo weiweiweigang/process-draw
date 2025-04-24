@@ -222,6 +222,7 @@ function createImgEntity(canvas: Canvas, param: ImgDataItem) {
       style: {
         d: deviceItem.path,
         fill: param.color ?? pathDefaultStyle.fill,
+        stroke: param.stroke ?? pathDefaultStyle.stroke,
         zIndex: param.zIndex?? 10,
         // cursor: 'pointer',
       },
@@ -982,6 +983,7 @@ function imgToDataItem(el: DisplayObject): ImgDataItem {
 
   if(el.classList[1] === 'pathEntityBox') {
     itemObj.color = el.querySelector('.imgBox__path')?.style.fill ?? '';
+    itemObj.stroke = el.querySelector('.imgBox__path')?.style.stroke ?? '';
     itemObj.scale = (el.querySelector('.imgBox__path') as DisplayObject).getLocalScale()[0]
   }
 

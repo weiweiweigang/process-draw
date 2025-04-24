@@ -2,7 +2,7 @@
  * @Author: Strayer
  * @Date: 2025-04-21
  * @LastEditors: Strayer
- * @LastEditTime: 2025-04-23
+ * @LastEditTime: 2025-04-24
  * @Description: 
  * @FilePath: \processDraw\src\components\processDrawEdit\attr.ts
  */
@@ -10,6 +10,7 @@
 import { ref, shallowRef } from "vue"
 import type { DisplayObject, Polyline, Rect, Text } from "@antv/g";
 import type { FormItemType, lineDataItem, TextDataItem } from "./dataType";
+import { panelData } from "./data";
 
 // 是否展示
 export const showAttrPanel = ref(false);
@@ -63,6 +64,7 @@ export function getPolyLineAttr(el: Polyline) {
         key: 'stroke',
         label: '颜色',
         component: 'color',
+        showAlpha: true,
       },
       {
         key:'lineWidth',
@@ -148,7 +150,8 @@ export function updatePolyLineAttr(el: Polyline) {
  * @description: path的默认样式
  */
 export const pathDefaultStyle: {[key: string]: any} = {
-  fill: '#3A7A98'
+  fill: '',
+  stroke: '',
 }
 /**
  * @description: 获取path的样式属性和表单选项
@@ -156,7 +159,11 @@ export const pathDefaultStyle: {[key: string]: any} = {
  */
 export function getPathAttr(el: DisplayObject) {
   const formObj: {[key: string]: any} = {}
+  console.log('%c [ formObj ]-162', 'font-size:13px; background:#347658; color:#78ba9c;', formObj);
   formObj.fill = el.querySelector('.imgBox__path')?.style.fill ?? pathDefaultStyle.fill;
+  formObj.stroke = el.querySelector('.imgBox__path')?.style.stroke ?? pathDefaultStyle.stroke;
+
+  const panelItem = panelData.value.find(item => item.key === el.getAttribute('data-imgKey'));
 
   const options: {
     groupTitle: string;
@@ -166,8 +173,17 @@ export function getPathAttr(el: DisplayObject) {
     formOptions: [
       {
         key: 'fill',
-        label: '颜色',
+        label: '填充色',
         component: 'color',
+        showAlpha: true,
+        predefine: panelItem?.colorPredefine,
+      },
+      {
+        key: 'stroke',
+        label: '边框色',
+        component: 'color',
+        showAlpha: true,
+        predefine: panelItem?.strokePredefine,
       },
     ]
   }]
@@ -184,6 +200,7 @@ export function updatePathAttr(el: DisplayObject) {
   const pathEntity = el.querySelector('.imgBox__path')
   if(pathEntity) {
     pathEntity.style.fill = attrForm.value.fill;
+    pathEntity.style.stroke = attrForm.value.stroke;
   }
 }
 
@@ -252,6 +269,7 @@ export function getTextAttr(el: DisplayObject) {
         key: 'boxfill',
         label: '背景颜色',
         component: 'color',
+        showAlpha: true,
       },
       {
         key:'boxlineWidth',
@@ -262,6 +280,7 @@ export function getTextAttr(el: DisplayObject) {
         key: 'boxstroke',
         label: '边框颜色',
         component: 'color',
+        showAlpha: true,
       },
       {
         key: 'boxradius',
@@ -285,6 +304,7 @@ export function getTextAttr(el: DisplayObject) {
         key: 'textfill',
         label: '字体颜色',
         component: 'color',
+        showAlpha: true,
       },
       {
         key:'textfontWeight',

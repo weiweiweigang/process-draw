@@ -2,9 +2,9 @@
  * @Author: Strayer
  * @Date: 2025-04-15
  * @LastEditors: Strayer
- * @LastEditTime: 2025-04-23
+ * @LastEditTime: 2025-04-24
  * @Description: 元件icon面板
- * @FilePath: \processDraw\src\components\processDrawEdit\iconPanel.vue
+ * @FilePath: \processDraw\src\components\processDrawEdit\iconpanel.vue
 -->
 
 <template>
@@ -64,7 +64,7 @@
             xmlns="http://www.w3.org/2000/svg" 
             xmlns:xlink="http://www.w3.org/1999/xlink"
           >
-            <path :fill="item.color ?? '#54BECC'" :d="item.path" />
+            <path :fill="item.color ?? '#54BECC'" :stroke="item.stroke ?? 'none'" :d="item.path" />
           </svg>
           <img v-else :src="`${item.img}`" :width="item.width>100? 100:item.width" />
         </div>

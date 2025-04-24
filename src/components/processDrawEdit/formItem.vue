@@ -2,7 +2,7 @@
  * @Author: Strayer
  * @Date: 2022-12-09
  * @LastEditors: Strayer
- * @LastEditTime: 2025-04-23
+ * @LastEditTime: 2025-04-24
  * @Description: 表单选项内容封装
 -->
 <template>
@@ -48,6 +48,7 @@
     v-else-if="props.itemObj.component === 'color'"
     v-model="(formItemValue as string)" 
     :show-alpha="props.itemObj.showAlpha" 
+    :predefine="props.itemObj.predefine"
   />
   <!-- 容错 -->
   <el-input 

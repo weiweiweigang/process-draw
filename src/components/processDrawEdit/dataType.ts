@@ -2,7 +2,7 @@
  * @Author: Strayer
  * @Date: 2025-04-23
  * @LastEditors: Strayer
- * @LastEditTime: 2025-04-23
+ * @LastEditTime: 2025-04-24
  * @Description: 
  * @FilePath: \processDraw\src\components\processDrawEdit\dataType.ts
  */
@@ -31,6 +31,7 @@ export interface FormItemType {
   }>
   // color
   showAlpha?: boolean, // 是否显示透明度
+  predefine?: string [], // 预设颜色
 
   // 是否必填
   required?: boolean,
@@ -58,6 +59,9 @@ export type PanelImgType = {
   height: number;
   path?: string;
   color?: string;
+  colorPredefine?: string [];
+  stroke: string,
+  strokePredefine?: string [];
 }
 
 // 图片元件数据
@@ -71,6 +75,7 @@ export type ImgDataItem = {
   rotate?: number,
 
   color?: string,
+  stroke?: string,
   scale?: number,
 }
 
