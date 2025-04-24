@@ -63,6 +63,7 @@ export type PanelImgType = {
 // 图片元件数据
 export type ImgDataItem = {
   id: string,
+  zIndex?: number,
   key: string,
   width: number,
   height: number,
@@ -78,6 +79,7 @@ export type lineDataItem = {
   id: string;
   angle90?: boolean;
   coord:  [number, number][];
+  zIndex?: number,
 
   style: {
     stroke: string;
@@ -94,6 +96,8 @@ export type lineDataItem = {
 export type TextDataItem = {
   id: string;
   coord: [number, number];
+  zIndex?: number,
+
   box: {
       width: number;
       height: number;

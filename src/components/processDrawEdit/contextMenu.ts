@@ -1,7 +1,7 @@
 import type { Canvas, DisplayObject } from "@antv/g";
 import type { MenuDataItem } from "./dataType";
 import { chooseDevice, copySource } from "./data";
-import { deleteElement } from "./comm";
+import { createImgEntity, deleteElement, imgToDataItem, updateZIndex } from "./comm";
 
 /**
  * @description: img元件右键菜单数据
@@ -23,7 +23,6 @@ export function getImgContextMenuData(canvas: Canvas, el: DisplayObject) {
       icon: '📋',
       clickParam: el.id,
       clickHandle: (id: string) => {
-        console.log('%c [ id ]-212', 'font-size:13px; background:#fff; color:#ff4bff;', id);
         copySource.value = canvas.document.querySelector(`#${id}`) as DisplayObject;
       },
     },
@@ -42,7 +41,7 @@ export function getImgContextMenuData(canvas: Canvas, el: DisplayObject) {
       icon: '⬆️',
       clickParam: el.id,
       clickHandle: (id: string) => {
-        console.log('%c [ id ]-212', 'font-size:13px; background:#fff; color:#ff4bff;', id);
+        updateZIndex(canvas, id, 999);
       },
     },
     {
@@ -51,7 +50,7 @@ export function getImgContextMenuData(canvas: Canvas, el: DisplayObject) {
       icon: '⬇️',
       clickParam: el.id,
       clickHandle: (id: string) => {
-        console.log('%c [ id ]-212', 'font-size:13px; background:#fff; color:#ff4bff;', id);
+        updateZIndex(canvas, id, 1);
       },
     },
   ];
@@ -70,7 +69,7 @@ export function getLineContextMenuData(canvas: Canvas, el: DisplayObject) {
       icon: '📋',
       clickParam: el.id,
       clickHandle: (id: string) => {
-        console.log('%c [ id ]-212', 'font-size:13px; background:#fff; color:#ff4bff;', id);
+        copySource.value = canvas.document.querySelector(`#${id}`) as DisplayObject;
       },
     },
     {
@@ -88,7 +87,7 @@ export function getLineContextMenuData(canvas: Canvas, el: DisplayObject) {
       icon: '⬆️',
       clickParam: el.id,
       clickHandle: (id: string) => {
-        console.log('%c [ id ]-212', 'font-size:13px; background:#fff; color:#ff4bff;', id);
+        updateZIndex(canvas, id, 999);
       },
     },
     {
@@ -97,7 +96,7 @@ export function getLineContextMenuData(canvas: Canvas, el: DisplayObject) {
       icon: '⬇️',
       clickParam: el.id,
       clickHandle: (id: string) => {
-        console.log('%c [ id ]-212', 'font-size:13px; background:#fff; color:#ff4bff;', id);
+        updateZIndex(canvas, id, 1);
       },
     },
   ];
@@ -110,6 +109,15 @@ export function getLineContextMenuData(canvas: Canvas, el: DisplayObject) {
 export function getTextContextMenuData(canvas: Canvas, el: DisplayObject) {
   const res: MenuDataItem[] = [
     {
+      key: 'copy',
+      label: '复制',
+      icon: '📋',
+      clickParam: el.id,
+      clickHandle: (id: string) => {
+        copySource.value = canvas.document.querySelector(`#${id}`) as DisplayObject;
+      },
+    },
+    {
       key: 'delete',
       label: '删除',
       icon: '🗑️',
@@ -124,7 +132,7 @@ export function getTextContextMenuData(canvas: Canvas, el: DisplayObject) {
       icon: '⬆️',
       clickParam: el.id,
       clickHandle: (id: string) => {
-        console.log('%c [ id ]-212', 'font-size:13px; background:#fff; color:#ff4bff;', id);
+        updateZIndex(canvas, id, 999);
       },
     },
     {
@@ -133,7 +141,7 @@ export function getTextContextMenuData(canvas: Canvas, el: DisplayObject) {
       icon: '⬇️',
       clickParam: el.id,
       clickHandle: (id: string) => {
-        console.log('%c [ id ]-212', 'font-size:13px; background:#fff; color:#ff4bff;', id);
+        updateZIndex(canvas, id, 1);
       },
     },
   ];

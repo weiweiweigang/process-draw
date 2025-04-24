@@ -2,7 +2,7 @@
  * @Author: Strayer
  * @Date: 2025-04-15
  * @LastEditors: Strayer
- * @LastEditTime: 2025-04-23
+ * @LastEditTime: 2025-04-24
  * @Description: 
  * @FilePath: \processDraw\src\components\processDrawEdit\comm.ts
  */
@@ -182,6 +182,7 @@ function createImgEntity(canvas: Canvas, param: ImgDataItem) {
     className: 'imgBox',
     style: {
       cursor: 'pointer',
+      zIndex: param.zIndex?? 10,
     }
   });
   group.setAttribute('data-imgKey', param.key);
@@ -221,6 +222,7 @@ function createImgEntity(canvas: Canvas, param: ImgDataItem) {
       style: {
         d: deviceItem.path,
         fill: param.color ?? pathDefaultStyle.fill,
+        zIndex: param.zIndex?? 10,
         // cursor: 'pointer',
       },
     });
@@ -234,6 +236,7 @@ function createImgEntity(canvas: Canvas, param: ImgDataItem) {
         width: param.width,
         height: param.height,
         src: deviceItem.img,
+        zIndex: param.zIndex?? 10,
       },
     })
     group.className += ' imgEntityBox';
@@ -372,6 +375,7 @@ function drawLine(canvas: Canvas, param?: {
       lineDash: polyLineDefaultStyle.isDash? [polyLineDefaultStyle.dashLen, polyLineDefaultStyle.dashGap]: 0,
       points: JSON.parse(JSON.stringify(lineCoords)),
       cursor: 'pointer',
+      zIndex: 10,
       ...param?.style,
     },
   });
@@ -451,8 +455,9 @@ function createLine(canvas: Canvas, param: lineDataItem) {
       ...polyLineDefaultStyle,
       ...param.style,
       lineDash: param.style.isDash? [param.style.dashLen ?? 0, param.style.dashGap ?? 0]: 0,
-      points: param.coord,
+      points: JSON.parse(JSON.stringify(param.coord)),
       cursor: 'pointer',
+      zIndex: param.zIndex ?? 10,
     },
   });
   (polyline as DisplayObject).setAttribute('data-angle90', param?.angle90 ?? false);
@@ -857,6 +862,7 @@ function createText(canvas: Canvas, param: TextDataItem) {
     className: 'textBox',
     style: {
       cursor: 'pointer',
+      zIndex: param.zIndex ?? 10,
     }
   });
   group.setLocalPosition(param.coord[0], param.coord[1]);
@@ -963,6 +969,7 @@ function imgToDataItem(el: DisplayObject): ImgDataItem {
 
   const itemObj: ImgDataItem = {
     id: el.id,
+    zIndex: el.style.zIndex,
     key: el.getAttribute('data-imgKey'),
     width: rectEntity.style.width - imgPadding * 2,
     height: rectEntity.style.height - imgPadding * 2,
@@ -985,10 +992,12 @@ function imgToDataItem(el: DisplayObject): ImgDataItem {
  * @description: 管道元素转为外部数据
  */
 function lineToDataItem(el: DisplayObject): lineDataItem {
+  const offset = el.getLocalPosition();
   const itemObj: lineDataItem = {
     id: el.id,
     angle90: el.getAttribute('data-angle90'),
-    coord: el.style.points,
+    coord: el.style.points.map((item: any) => [item[0]+offset[0], item[1]+offset[1]]),
+    zIndex: el.style.zIndex,
     
     style: {
       stroke: el.style.stroke,
@@ -1017,6 +1026,8 @@ function textToDataItem(el: DisplayObject): TextDataItem {
       (el as DisplayObject).getLocalPosition()[0] + rectEntity.style.width / 2, 
       (el as DisplayObject).getLocalPosition()[1] + rectEntity.style.height / 2,
     ],
+    zIndex: el.style.zIndex,
+
     box: {
       width: rectEntity.style.width,
       height: rectEntity.style.height,
@@ -1043,6 +1054,31 @@ function textToDataItem(el: DisplayObject): TextDataItem {
   return JSON.parse(JSON.stringify(itemObj))
 }
 
+/**
+ * @description: 调整元素zIndex
+ */
+function updateZIndex(canvas: Canvas, id: string, zIndex: number) {
+  const element = canvas.document.querySelector(`#${id}`) as DisplayObject;
+        
+  let dataItem: ImgDataItem | lineDataItem | TextDataItem | undefined;
+
+  if(element.name === 'imgBox') {
+    dataItem = imgToDataItem(element);
+    dataItem.zIndex = zIndex;
+    element.remove();
+    createImgEntity(canvas, dataItem)
+  } else if(element.name === 'line') {
+    dataItem = lineToDataItem(element);
+    dataItem.zIndex = zIndex;
+    element.remove();
+    createLine(canvas, dataItem)
+  } else if(element.name === 'textBox') {
+    dataItem = textToDataItem(element);
+    dataItem.zIndex = zIndex;
+    element.remove();
+    createText(canvas, dataItem)
+  }
+}
 
 export {
   // 使用鼠标滚轮实现相机缩放
@@ -1073,6 +1109,8 @@ export {
   lineToDataItem,
   // 文本元素转为外部数据
   textToDataItem,
+  // 调整元素zIndex
+  updateZIndex,
 
   // 给元素添加右键菜单
   customContextMenu,
