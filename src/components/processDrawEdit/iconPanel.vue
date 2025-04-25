@@ -2,7 +2,7 @@
  * @Author: Strayer
  * @Date: 2025-04-15
  * @LastEditors: Strayer
- * @LastEditTime: 2025-04-24
+ * @LastEditTime: 2025-04-25
  * @Description: 元件icon面板
  * @FilePath: \processDraw\src\components\processDrawEdit\iconPanel.vue
 -->
@@ -21,6 +21,9 @@
           <button @click="emit('submitDrawing')" class="iconPanel__button iconPanel__button--primary">
             提交
           </button>
+          <button @click="clearCanvas" class="iconPanel__button iconPanel__button--danger">
+            清空画布
+          </button>
           <button @click="togglePanel" class="iconPanel__toggle">
             {{ isPanelCollapsed ? '展开' : '收起' }}
           </button>
@@ -35,6 +38,9 @@
         </button>
         <button @click="drawLine(canvas!, {style: { lineDash: [4, 4] } })" class="iconPanel__button">
           画任意虚线
+        </button>
+        <button @click="clearCanvas" class="iconPanel__button">
+          清空画布
         </button>
       </div>
     </div>
@@ -158,6 +164,10 @@ const helpData = shallowRef([
   {
     title: '层级调整',
     text: '鼠标右键菜单选择置顶或置底'
+  },
+  {
+    title: '删除画布上所有元素',
+    text: '在元件库面板上点击清空画布按钮'
   }
 ])
 
@@ -178,6 +188,10 @@ function closeHelpDialog() {
 
 function dragstart(event: any, item: any) {
   event.dataTransfer.setData('Text', item.key);  
+}
+
+function  clearCanvas() {
+  props.canvas?.destroyChildren();
 }
 </script>
 
@@ -277,6 +291,15 @@ function dragstart(event: any, item: any) {
 
 .iconPanel__button--primary:hover {
   background-color: #66b1ff;
+  color: white;
+}
+.iconPanel__button--danger {
+  background-color: #f56c6c;
+  color: white;
+  border-color: #f56c6c;
+}
+.iconPanel__button--danger:hover {
+  background-color: #f78989;
   color: white;
 }
 

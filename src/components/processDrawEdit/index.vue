@@ -2,7 +2,7 @@
  * @Author: Strayer
  * @Date: 2025-04-15
  * @LastEditors: Strayer
- * @LastEditTime: 2025-04-23
+ * @LastEditTime: 2025-04-25
  * @Description: 
  * @FilePath: \processDraw\src\components\processDrawEdit\index.vue
 -->
@@ -32,7 +32,7 @@
 import { Renderer } from '@antv/g-canvas';
 import { Canvas, DisplayObject } from '@antv/g';
 import { onMounted, shallowRef, watch, onBeforeUnmount } from 'vue';
-import { createImgEntity, imgDropHandle,addWheel, moveCamera, createLine, createText, deleteElement, imgToDataItem, lineToDataItem, textToDataItem, client2Canvas } from './comm';
+import { createImgEntity, imgDropHandle,addWheel, moveCamera, createLine, createText, deleteElement, imgToDataItem, lineToDataItem, textToDataItem, client2Canvas, pasteElement } from './comm';
 import Attr from './attr.vue'
 import {type ImgDataItem, type lineDataItem, type PanelImgType, type TextDataItem } from './dataType';
 import { v4 as uuidv4 } from 'uuid';
@@ -111,6 +111,7 @@ async function  initCanvas() {
 
   // 渲染数据
   watch(() => props.canvasData, () => {
+    canvas.value?.destroyChildren();
     renderData();
   }, { immediate: true })
 }
@@ -172,33 +173,9 @@ function  keyDownHandle(event: KeyboardEvent) {
     if(chooseDevice.value) copySource.value = chooseDevice.value;
   } else if(event.code === 'KeyV' && event.ctrlKey) {
     // 粘贴
-    if(copySource.value?.name === 'imgBox') {
-      const newElement = imgToDataItem(copySource.value);
-      newElement.id = uuidv4();
-
-      const point = client2Canvas(canvas.value!, [lastMouseEvent.value?.clientX ?? 0, lastMouseEvent.value?.clientY ?? 0])
-      newElement.coord = [point.x, point.y];
-      
-      createImgEntity(canvas.value!, newElement)
-    } else if(copySource.value?.name === 'line') {
-      const newElement = lineToDataItem(copySource.value);
-      newElement.id = uuidv4();
-
-      const point = client2Canvas(canvas.value!, [lastMouseEvent.value?.clientX ?? 0, lastMouseEvent.value?.clientY ?? 0])
-      const originBeginPoint = newElement.coord[0];
-      const offset = [point.x - originBeginPoint[0], point.y - originBeginPoint[1]];
-      newElement.coord = newElement.coord.map( item => [item[0] + offset[0], item[1] + offset[1]])
-      
-      createLine(canvas.value!, newElement)
-    } else if(copySource.value?.name === 'textBox') {
-      const newElement = textToDataItem(copySource.value);
-      newElement.id = uuidv4();
-
-      const point = client2Canvas(canvas.value!, [lastMouseEvent.value?.clientX ?? 0, lastMouseEvent.value?.clientY ?? 0])
-      newElement.coord = [point.x, point.y];
-      
-      createText(canvas.value!, newElement)
-    }
+    pasteElement(canvas.value!, lastMouseEvent.value!)
+  } else if(event.code === 'KeyV' && event.ctrlKey) {
+    
   }
 }
 </script>
