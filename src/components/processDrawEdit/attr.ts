@@ -2,7 +2,7 @@
  * @Author: Strayer
  * @Date: 2025-04-21
  * @LastEditors: Strayer
- * @LastEditTime: 2025-04-24
+ * @LastEditTime: 2025-04-25
  * @Description: 
  * @FilePath: \processDraw\src\components\processDrawEdit\attr.ts
  */
@@ -11,6 +11,7 @@ import { ref, shallowRef } from "vue"
 import type { DisplayObject, Polyline, Rect, Text } from "@antv/g";
 import type { FormItemType, lineDataItem, TextDataItem } from "./dataType";
 import { panelData } from "./data";
+import { getDataOptionText } from "./comm";
 
 // 是否展示
 export const showAttrPanel = ref(false);
@@ -249,6 +250,17 @@ export function getTextAttr(el: DisplayObject) {
   formObj.boxwidth = formObj.boxwidth - formObj.textdx * 2;
   formObj.boxheight = formObj.boxheight - formObj.textdy * 2;
 
+  const isDataBox = el.getAttribute('data-isDataBox');
+  const dataOption = el.getAttribute('data-dataOption');
+
+  if(isDataBox === 'true') {
+    formObj.isDataBox = true;
+    formObj.dataOption = JSON.parse(dataOption);
+  } else {
+    formObj.isDataBox = false;
+    formObj.dataOption = [];
+  }
+  
   const options: {
     groupTitle: string;
     formOptions: FormItemType[];
@@ -291,10 +303,6 @@ export function getTextAttr(el: DisplayObject) {
   }, {
     groupTitle: '文本',
     formOptions: [
-      {
-        key:'texttext',
-        label: '文本内容',
-      },
       {
         key:'textfontSize',
         label: '字号大小',
@@ -348,6 +356,13 @@ export function getTextAttr(el: DisplayObject) {
     ]
   }]
 
+  if(!formObj.isDataBox) {
+    options[1].formOptions.unshift({
+      key:'texttext',
+      label: '文本内容',
+    })
+  }
+
   return {
     options,
     formObj,
@@ -385,5 +400,10 @@ export function updateTextAttr(el: DisplayObject) {
       textEntity.style.dx = attrForm.value.textdx;
       textEntity.style.dy = attrForm.value.textdy;
       textEntity.style.wordWrapWidth = attrForm.value.boxwidth;
+
+      if(attrForm.value.isDataBox) {
+        el.setAttribute('data-dataOption', JSON.stringify(attrForm.value.dataOption));
+        textEntity.style.text = getDataOptionText(attrForm.value.dataOption)
+      }
     }
 }

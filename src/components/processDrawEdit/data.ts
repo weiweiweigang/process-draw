@@ -2,7 +2,7 @@
  * @Author: Strayer
  * @Date: 2025-04-15
  * @LastEditors: Strayer
- * @LastEditTime: 2025-04-23
+ * @LastEditTime: 2025-04-25
  * @Description: 
  * @FilePath: \processDraw\src\components\processDrawEdit\data.ts
  */
@@ -28,6 +28,9 @@ export const imgPadding = 8;
 export const chooseDevice = shallowRef<DisplayObject>()
 // 当前复制的源对象
 export const copySource = shallowRef<DisplayObject>();
+
+// 外部数据
+export const serverData = ref<{[key: string]: any}>({})
 
 
 export const initData = () => {

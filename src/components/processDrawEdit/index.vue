@@ -38,7 +38,7 @@ import {type ImgDataItem, type lineDataItem, type PanelImgType, type TextDataIte
 import { v4 as uuidv4 } from 'uuid';
 
 import IconPanel  from './iconPanel.vue';
-import { chooseDevice, copySource, imgPadding, initData, panelData } from './data';
+import { chooseDevice, copySource, initData, panelData, serverData } from './data';
 
 (window as any).__g_instances__ = [];
 
@@ -49,6 +49,7 @@ const props = defineProps<{
     textData: TextDataItem [];
   },
   deviceData: PanelImgType [];
+  dataBoxData?: {[key: string]: any}
 }>();
 
 const emit = defineEmits<{
@@ -64,7 +65,7 @@ const emit = defineEmits<{
 onMounted(() => {
   initData();
   initCanvas();
-  
+
   // 键盘按下事件
   document.addEventListener('keydown', keyDownHandle);
   // 鼠标移动事件
@@ -72,12 +73,16 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
+  canvas.value?.destroy();
   document.removeEventListener('keydown', keyDownHandle);
   document.removeEventListener('mousemove', mouseMoveHandle);
 })
 
 watch(() => props.deviceData, (val) => {
   panelData.value = val;
+}, { immediate: true  });
+watch(() => props.dataBoxData, (val) => {
+  serverData.value = val ?? {};
 }, { immediate: true  })
 
 const canvas = shallowRef<Canvas>()
@@ -162,7 +167,7 @@ function mouseMoveHandle(event: MouseEvent) {
  * @description: 键盘按下事件
  */
 function  keyDownHandle(event: KeyboardEvent) {
-  console.log('%c [ event ]-230', 'font-size:13px; background:#9897c7; color:#dcdbff;', event);
+  // console.log('%c [ event ]-230', 'font-size:13px; background:#9897c7; color:#dcdbff;', event);
   if(event.code === 'Delete') {
     // 删除
     if(['imgBox', 'line', 'textBox'].includes(chooseDevice.value?.name ?? '')) {

@@ -2,7 +2,7 @@
  * @Author: Strayer
  * @Date: 2025-04-23
  * @LastEditors: Strayer
- * @LastEditTime: 2025-04-24
+ * @LastEditTime: 2025-04-25
  * @Description: 
  * @FilePath: \processDraw\src\components\processDrawEdit\dataType.ts
  */
@@ -122,4 +122,14 @@ export type TextDataItem = {
       dx: number;
       dy: number;
   };
+
+  // 数据框
+  isDataBox?: boolean,
+  dataOption?: Array<{
+    key: string; // 数据对应的key
+    label?: string; // 数据展示的标签
+    unit?: string; // 数据展示的单位
+    equation?: string; // 单位转换的公式
+    decimal?: number; // 保留的小数位
+  }>
 }

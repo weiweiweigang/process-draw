@@ -8,7 +8,7 @@
  */
 import { Canvas, Circle, DisplayObject, Text, Group, HTML, Image, Path, Polyline, Rect, ElementEvent  } from '@antv/g';
 import interact from 'interactjs';
-import { disableDragDevice, isCreateLine, disableDragCamera, panelData, chooseDevice, imgPadding, copySource } from './data';
+import { disableDragDevice, isCreateLine, disableDragCamera, panelData, chooseDevice, imgPadding, copySource, serverData } from './data';
 import { v4 as uuidv4 } from 'uuid';
 import { pathDefaultStyle, polyLineDefaultStyle, textDefaultStyle } from './attr';
 import Hammer from 'hammerjs';
@@ -324,6 +324,17 @@ function imgDropHandle(canvas: Canvas, event:any) {
       coord: [point.x, point.y],
       box: textDefaultStyle.box,
       text: textDefaultStyle.text,
+    })
+  } else if(data === 'dataBox') {
+    createText(canvas, {
+      id: uuidv4(),
+      coord: [point.x, point.y],
+      box: textDefaultStyle.box,
+      text: textDefaultStyle.text,
+      isDataBox: true,
+      dataOption: [{
+        key: '',
+      }]
     })
   }
 }
@@ -852,6 +863,25 @@ function moveCamera(canvas: Canvas) {
 
 }
 
+function getDataOptionText(dataOption: TextDataItem['dataOption']) {
+  if(!dataOption) return '';
+
+  let text = '';
+  for(let i = 0; i<dataOption.length; i++) {
+    console.log('%c [ serverData.value ]-873', 'font-size:13px; background:#166875; color:#5aacb9;', serverData.value);
+
+    const item = dataOption[i];
+    let value = serverData.value[item.key];
+    if(item.equation) {
+      // TODO: 这里处理公式转换和小数位保留
+    }
+    if(i !== 0) text += '\n'
+    text += `${item.label ?? ''} ${ value ?? '--' } ${ item.unit ?? ''}`
+  }
+
+  return text
+}
+
 /**
  * @description: 添加文本框
  */
@@ -871,6 +901,10 @@ function createText(canvas: Canvas, param: TextDataItem) {
   group.setLocalPosition(param.coord[0], param.coord[1]);
   group.translateLocal(-width/2, -height/2);
   group.setOrigin(width/2, height/2);
+
+  group.setAttribute('data-isDataBox', param.isDataBox? 'true':'false');
+  group.setAttribute('data-dataOption', param.isDataBox ? JSON.stringify(param.dataOption ?? []):'');
+
 
   // 内部加个box做旋转
   const groupInner = new Group({
@@ -893,12 +927,15 @@ function createText(canvas: Canvas, param: TextDataItem) {
   })
   groupInner.appendChild(box);
 
+  let text = param.text.text;
+  if(param.isDataBox && param.dataOption) text = getDataOptionText(param.dataOption);
+
   const textEntity = new Text({
     name: 'textBox__text',
     class: 'textBox__text',
     style: {
       ...param.text,
-      text: param.text.text,
+      text: text,
       textBaseline: 'top',
       wordWrap: true,
       wordWrapWidth: param.box.width,
@@ -1050,10 +1087,15 @@ function textToDataItem(el: DisplayObject): TextDataItem {
       letterSpacing: textEntity.style.letterSpacing,
       dx: textEntity.style.dx,
       dy: textEntity.style.dy,
-    }
+    },
   }
   itemObj.box.width -= itemObj.text.dx * 2;
   itemObj.box.height -= itemObj.text.dy * 2;
+
+  if(el.getAttribute('data-isDataBox') === 'true') {
+    itemObj.isDataBox = true;
+    itemObj.dataOption = JSON.parse(el.getAttribute('data-dataOption')?? '[]');
+  }
 
   return JSON.parse(JSON.stringify(itemObj))
 }
@@ -1161,4 +1203,6 @@ export {
   addRotateToEntity,
   // 给元素添加缩放功能
   addScaleToEntity,
+  // 数据转文本
+  getDataOptionText,
 }

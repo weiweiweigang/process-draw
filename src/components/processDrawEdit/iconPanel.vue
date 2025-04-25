@@ -61,6 +61,17 @@
         </div>
         <p class="iconItem__label">文字</p>
       </div>
+
+      <div
+        class="iconItem"
+        draggable="true"
+        :ondragstart="(event: any) => dragstart(event, {key: 'dataBox'})"
+      >
+        <div class="iconItem__image">
+          <p>数据框</p>
+        </div>
+        <p class="iconItem__label">数据框</p>
+      </div>
       
       <div 
         v-for="item in panelData" 

@@ -2,7 +2,7 @@
  * @Author: Strayer
  * @Date: 2025-04-21
  * @LastEditors: Strayer
- * @LastEditTime: 2025-04-23
+ * @LastEditTime: 2025-04-25
  * @Description: 
  * @FilePath: \processDraw\src\components\processDrawEdit\attr.vue
 -->
@@ -34,6 +34,43 @@
           </template>
           
         </div>
+
+        <!-- 数据项特殊处理 -->
+        <template v-if="attrForm.isDataBox">
+          <div class="attr__section" v-for="(dataItem, index) in attrForm.dataOption">
+            <div class="attr__section-title">数据项</div>
+            
+            <el-form-item label="对应的key">
+              <el-input 
+                v-model="attrForm.dataOption[index].key" 
+              />
+            </el-form-item>
+            <el-form-item label="名称">
+              <el-input 
+                v-model="attrForm.dataOption[index].label" 
+              />
+            </el-form-item>
+            <el-form-item label="单位">
+              <el-input 
+                v-model="attrForm.dataOption[index].unit" 
+              />
+            </el-form-item>
+            <el-form-item label="转换公式">
+              <el-input 
+                v-model="attrForm.dataOption[index].equation" 
+              />
+            </el-form-item>
+            <el-form-item label="小数位">
+              <el-input-number 
+                v-model.number="attrForm.dataOption[index].decimal" 
+                :controls="false"
+                style="width: 100%;"
+              />
+            </el-form-item>
+            <el-button type="danger" @click="attrForm.dataOption.splice(index, 1)">移除数据项</el-button>
+          </div>
+          <el-button type="primary" @click="attrForm.dataOption.push({ key: '', })">新增数据项</el-button>
+        </template>
         
         <div class="attr__actions">
           <el-button type="primary" @click="onSubmit">保存</el-button>
