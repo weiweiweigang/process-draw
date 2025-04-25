@@ -160,10 +160,9 @@ function customContextMenu(canvas: Canvas, el: DisplayObject, menuData: MenuData
 
       const clickRemoveHand = (e: any) => {
         html.remove();
-        canvas.removeEventListener('click', clickRemoveHand);
       }
       // 监听画布点击事件移除菜单
-      canvas.addEventListener('click', clickRemoveHand);
+      canvas.addEventListener('click', clickRemoveHand, { once: true });
     }, 200)
   })
 }
@@ -355,7 +354,8 @@ function client2Canvas(canvas: Canvas, clientPoint: [number, number]) {
  * @description: 绘制管道
  * 鼠标左键点击一下记下一个点的坐标，鼠标双击完成绘制
  */
-function drawLine(canvas: Canvas, param?: {
+function drawLine(canvas: Canvas, param: {
+  coord: [number, number] [],
   style?: any,
   angle90?: boolean, // 转角是否必须90度
 }) {
@@ -365,7 +365,7 @@ function drawLine(canvas: Canvas, param?: {
   disableDragCamera.value = true;
   disableDragDevice.value = true;
 
-  let lineCoords: [number, number][] = [];
+  let lineCoords: [number, number][] = param?.coord ?? [];
 
   const polyline = new Polyline({
     id: uuidv4(),
@@ -384,16 +384,19 @@ function drawLine(canvas: Canvas, param?: {
 
   console.log('polyline.id:', polyline.id)
 
+  canvas.appendChild(polyline);
+  // 添加可拖拽功能
+  addDragToImgGroup(canvas, polyline);
+  // 添加自定义右键菜单
+  customContextMenu(canvas, polyline, getLineContextMenuData(canvas, polyline))
   // 添加移入高亮效果
   addEmphaticToImgGroupWhenHover(polyline);
 
   // 鼠标左键点击一下记下一个点的坐标，鼠标双击完成绘制
-  let perTapTime = new Date();
   const clickHandle = (event: any) => {
 
-    // 两次点击的时间少于500ms判断为双击
-    const nowTapTime = new Date();
-    if(nowTapTime.getTime() - perTapTime.getTime() < 300) {
+    //双击完成绘制
+    if(event.detail === 2) {
       // 添加可拖拽节点
       addDragNodePointToLine(canvas, polyline)
       
@@ -404,7 +407,6 @@ function drawLine(canvas: Canvas, param?: {
       disableDragDevice.value = false;
       return;
     }
-    perTapTime = nowTapTime;
 
     // 计算坐标
     const point = client2Canvas(canvas, [event.clientX, event.clientY])
@@ -417,14 +419,14 @@ function drawLine(canvas: Canvas, param?: {
     lineCoords.push([point.x, point.y]);
     polyline.style.points = JSON.parse(JSON.stringify(lineCoords));
 
-    if(lineCoords.length === 1) {
-      canvas.appendChild(polyline);
-      // 添加可拖拽功能
-      addDragToImgGroup(canvas, polyline);
-      // 添加自定义右键菜单
-      customContextMenu(canvas, polyline, getLineContextMenuData(canvas, polyline))
-    
-    }
+    // 首个点出现后把线添加到画布上
+    // if(lineCoords.length === 1) {
+    //   canvas.appendChild(polyline);
+    //   // 添加可拖拽功能
+    //   addDragToImgGroup(canvas, polyline);
+    //   // 添加自定义右键菜单
+    //   customContextMenu(canvas, polyline, getLineContextMenuData(canvas, polyline))
+    // }
   };
   canvas.addEventListener('click', clickHandle);
 

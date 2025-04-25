@@ -30,18 +30,23 @@
         </div>
       </div>
       <div class="iconPanel__tools">
-        <button @click="drawLine(canvas!, {angle90: true})" class="iconPanel__button">
-          画直角实线
+        <button v-if="currentDrawLineType" @click="currentDrawLineType = 0" class="iconPanel__button">
+          取消画线
         </button>
-        <button @click="drawLine(canvas!, {style: { lineDash: [4, 4] }, angle90: true})" class="iconPanel__button">
-          画直角虚线
-        </button>
-        <button @click="drawLine(canvas!, {style: { lineDash: [4, 4] } })" class="iconPanel__button">
-          画任意虚线
-        </button>
-        <button @click="clearCanvas" class="iconPanel__button">
-          清空画布
-        </button>
+        <template v-else>
+          <button @click="currentDrawLineType = 1" class="iconPanel__button">
+            画直角实线
+          </button>
+          <button @click="currentDrawLineType = 2" class="iconPanel__button">
+            画直角虚线
+          </button>
+          <button @click="currentDrawLineType = 3" class="iconPanel__button">
+            画任意虚线
+          </button>
+          <button @click="clearCanvas" class="iconPanel__button">
+            清空画布
+          </button>
+        </template>
       </div>
     </div>
     
@@ -103,9 +108,9 @@
 </template>
 
 <script setup lang="ts">
-import { shallowRef, ref } from 'vue';
+import { shallowRef, ref, watch } from 'vue';
 import { panelData } from './data';
-import { drawLine } from './comm';
+import { client2Canvas, drawLine } from './comm';
 import { Canvas } from '@antv/g';
 
 const props = defineProps<{
@@ -127,7 +132,7 @@ const helpData = shallowRef([
   },
   {
     title: '添加管道',
-    text: '在元件面板顶部单击画线按钮。然后去画布用鼠标左键单击即可，单击一次生成一个折线点位。双击结束生成管道'
+    text: '在元件面板顶部单击画线按钮。然后去画布用鼠标左键双击开始画线，单击一次生成一个折线点位。双击结束生成管道'
   },
   {
     title: '删除元件和管道',
@@ -190,9 +195,36 @@ function dragstart(event: any, item: any) {
   event.dataTransfer.setData('Text', item.key);  
 }
 
+/**
+ * @description: 清空画布
+ */
 function  clearCanvas() {
   props.canvas?.destroyChildren();
 }
+
+// 当前画线类型
+const currentDrawLineType = ref(0) // 0 不画线 1 画直角实线 2 画直角虚线 3 画任意虚线
+
+watch(() => props.canvas, (val) => {
+  if(val) {
+    val.addEventListener('click', (event: MouseEvent) => {
+      // 双击
+      if(event.detail === 2 && currentDrawLineType.value) {
+        // 计算坐标
+        const point = client2Canvas(props.canvas!, [event.clientX, event.clientY])
+
+        if(currentDrawLineType.value === 1) {
+          drawLine(props.canvas!, { coord: [[point.x, point.y]], angle90: true })
+        } else if(currentDrawLineType.value === 2) {
+          drawLine(props.canvas!, { coord: [[point.x, point.y]], style: { lineDash: [4, 4] }, angle90: true})
+        } else if(currentDrawLineType.value === 3) {
+          drawLine(props.canvas!, { coord: [[point.x, point.y]], style: { lineDash: [4, 4] } })
+        }
+      }
+    })
+  }
+}, { immediate: true })
+
 </script>
 
 <style scoped>
