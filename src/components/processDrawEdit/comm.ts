@@ -2,71 +2,94 @@
  * @Author: Strayer
  * @Date: 2025-04-15
  * @LastEditors: Strayer
- * @LastEditTime: 2025-04-25
+ * @LastEditTime: 2025-05-07
  * @Description: 
  * @FilePath: \processDraw\src\components\processDrawEdit\comm.ts
  */
 import { Canvas, Circle, DisplayObject, Text, Group, HTML, Image, Path, Polyline, Rect, ElementEvent  } from '@antv/g';
 import interact from 'interactjs';
-import { disableDragDevice, isCreateLine, disableDragCamera, panelData, chooseDevice, imgPadding, copySource, serverData } from './data';
-import { v4 as uuidv4 } from 'uuid';
-import { pathDefaultStyle, polyLineDefaultStyle, textDefaultStyle } from './attr';
+import { disableDragDevice, isCreateLine, disableDragCamera, panelData, chooseDevice, imgPadding, copySource, serverData, disableEdit, getCanvasDataRfEl, canvasDataRef, emitRef, retreatAndAdvance, removeCanvasDataRfEl, addCanvasDataRfEl, drawLineInfo } from './data';
+import { polyLineDefaultStyle, textDefaultStyle } from './attr';
 import Hammer from 'hammerjs';
-import type { MenuDataItem, lineDataItem, TextDataItem, ImgDataItem } from './dataType';
+import type { MenuDataItem, LineDataItem, TextDataItem, ImgDataItem } from './dataType';
 import { getImgContextMenuData, getLineContextMenuData } from './contextMenu';
+import { clone, mapToObj } from 'remeda';
+import { v4 as uuidv4 } from 'uuid';
 
 /**
- * @description: 给图片元素添加鼠标移入高亮
+ * @description: 添加高亮效果
+ * @param {DisplayObject} element
  */
-function addEmphaticToImgGroupWhenHover(el: DisplayObject) {
-  const addEmphatic = (element: DisplayObject) => {
-    const elementAll = element.querySelectorAll('.chooseView');
-    for(const item of elementAll) {
-      item.style.visibility = 'visible';
-    }
-  }
+function addEmphatic(element: DisplayObject) {
+  if(disableEdit.value) return;
+  if(disableDragDevice.value) return;
 
-  const removeEmphatic = (element: DisplayObject) => {
-    const elementAll = element.querySelectorAll('.chooseView');
-    for(const item of elementAll) {
-      item.style.visibility = 'hidden';
-    }
+  const elementAll = element.querySelectorAll('.chooseView');
+  for(const item of elementAll) {
+    item.style.visibility = 'visible';
   }
+}
+
+// 移除高亮效果
+function  removeEmphatic(element: DisplayObject) {
+  const elementAll = element.querySelectorAll('.chooseView');
+  for(const item of elementAll) {
+    item.style.visibility = 'hidden';
+  }
+}
+
+/**
+ * @description: 给元素添加点击选中效果
+ */
+function addClickChooseForReal(canvas: Canvas, el: DisplayObject) {
+
 
   el.addEventListener('click', (e: any) => {
-    if(chooseDevice.value) removeEmphatic(chooseDevice.value);
+    if(chooseDevice.value) removeEmphatic(canvas.document.querySelector(`#${chooseDevice.value.id}`)!);
 
-    chooseDevice.value = el;
+    if(disableEdit.value) return;
+    if(disableDragDevice.value) return;
+
+    chooseDevice.value = getCanvasDataRfEl(el.id)!;
     addEmphatic(el);
   });
 
-  el.addEventListener('mouseenter', (e: any) => {
-    if(chooseDevice.value?.id === el.id) return;
+  // 移入高亮的会影响管线绘制，先注释
+  // el.addEventListener('mouseenter', (e: any) => {
+  //   if(chooseDevice.value?.id === el.id) return;
 
-    addEmphatic(el);
-  });
+  //   addEmphatic(el);
+  // });
 
-  el.addEventListener('mouseleave', (e: any) => {
-    if(chooseDevice.value?.id === el.id) return;
+  // el.addEventListener('mouseleave', (e: any) => {
+  //   if(chooseDevice.value?.id === el.id) return;
 
-    removeEmphatic(el);
-  });
+  //   removeEmphatic(el);
+  // });
 }
 
 /**
  * @description: 给图片元素添加拖拽效果
  */
-function addDragToImgGroup(canvas: Canvas, el: any) {
+function addDragToImgGroup(canvas: Canvas, el: DisplayObject) {
   const camera = canvas.getCamera();
+
+  let retreatSnapshot: ImgDataItem | LineDataItem | TextDataItem;
 
   const interactable = interact(el as any, {
   // 直接传入节点1
     context: canvas.document as any, // 传入上下文
+    // 设置更高的优先级
+    actionChecker: function(pointer: any, event: any, action: any) {
+      // 返回一个更高的优先级值
+      return action ? { name: action.name, priority: 10 } : null;
+    }
   }).draggable({
     onstart: function (event) {
       if(disableDragDevice.value) return;
       // 禁止画布移动
       disableDragCamera.value = true;
+      retreatSnapshot = clone(getCanvasDataRfEl(el.id)!);
     },
     onmove: function (event) {
       if(disableDragDevice.value) return;
@@ -77,6 +100,10 @@ function addDragToImgGroup(canvas: Canvas, el: any) {
 
       // 改变节点1位置
       el.translateLocal(dx / zoom, dy / zoom);
+
+      // 更新映射的数据
+      updateCanvasDataRfElByReal(el)
+
       // 获取节点1位置
       const [nx, ny] = el.getLocalPosition();
       // 改变边的端点位置
@@ -86,22 +113,31 @@ function addDragToImgGroup(canvas: Canvas, el: any) {
     onend: function (event) {
       if(disableDragDevice.value) return;
 
+      const canvasDataEl = getCanvasDataRfEl(el.id)!;
+      canvasDataEl.editType.isUpdate = true;
+
+      retreatAndAdvance.value.addLog({
+        type: 'update',
+        retreatSnapshot,
+        advanceSnapshot: clone(canvasDataEl),
+      })
+
       // console.log('%c [ event ]-67', 'font-size:13px; background:#afb2d7; color:#f3f6ff;', event);
       // 恢复画布移动
       setTimeout(() => {
         disableDragCamera.value = false;
       }, 100);
-      },
-    });
+    },
+  });
 
   // 在元素上存储 interactable 引用，以便后续可以销毁
-  el._interactable = interactable;
+  (el as any)._interactable = interactable;
 
   // 监听元素销毁事件
   el.addEventListener(ElementEvent.REMOVED, () => {
-    if (el._interactable) {
-      el._interactable.unset(); // 销毁 interact 实例
-      el._interactable = null;
+    if ((el as any)._interactable) {
+      (el as any)._interactable.unset(); // 销毁 interact 实例
+      (el as any)._interactable = null;
     }
   });
 }
@@ -118,7 +154,7 @@ function customContextMenu(canvas: Canvas, el: DisplayObject, menuData: MenuData
     
     const point = client2Canvas(canvas, [e.clientX+ 10, e.clientY]);
 
-    let innerHtml = `<div class="context-menu">`
+    let innerHtml = '<div class="context-menu">'
     for(const item of menuData) {
       innerHtml += `
         <div class="context-menu__item" data-key="${item.key}">
@@ -126,19 +162,19 @@ function customContextMenu(canvas: Canvas, el: DisplayObject, menuData: MenuData
         </div>
       `
     }
-    innerHtml += `</div>`;
+    innerHtml += '</div>';
     
     // 自定义右键菜单
     const html = new HTML({
-        id: 'antVGContextMenu',
-        style: {
-            x: point.x,
-            y: point.y,
-            width: 100,
-            height: 100,
-            innerHTML: innerHtml,
-            pointerEvents: 'all',
-        },
+      id: 'antVGContextMenu',
+      style: {
+        x: point.x,
+        y: point.y,
+        width: 100,
+        height: 100,
+        innerHTML: innerHtml,
+        pointerEvents: 'all',
+      },
     });
     html.setLocalScale(1/zoom);
     html.translateLocal(-50+50/zoom, -50+50/zoom)
@@ -170,7 +206,7 @@ function customContextMenu(canvas: Canvas, el: DisplayObject, menuData: MenuData
 /**
  * @description: 新建一个img元素
  */
-function createImgEntity(canvas: Canvas, param: ImgDataItem) {
+function createImgReal(canvas: Canvas, param: ImgDataItem) {
   const deviceItem = panelData.value.find(item => item.key === param.key)!;
   const width = param.width + imgPadding * 2;
   const height = param.height + imgPadding * 2;
@@ -184,7 +220,7 @@ function createImgEntity(canvas: Canvas, param: ImgDataItem) {
       zIndex: param.zIndex?? 10,
     }
   });
-  group.setAttribute('data-imgKey', param.key);
+
   group.setPosition(param.coord[0], param.coord[1]);
   group.translate(-width/2, -height/2);
   group.setOrigin(width/2, height/2);
@@ -215,13 +251,15 @@ function createImgEntity(canvas: Canvas, param: ImgDataItem) {
 
   let imageEntity: DisplayObject;
   if(deviceItem.path) {
+    const panelObj = mapToObj(panelData.value, item => [item.key, item])[param.key];
+
     imageEntity = new Path({
       name: 'imgBox__path',
       className: 'imgBox__path imgBox__contentIcon',
       style: {
         d: deviceItem.path,
-        fill: param.color ?? pathDefaultStyle.fill,
-        stroke: param.stroke ?? pathDefaultStyle.stroke,
+        fill: param.color ?? panelObj.color,
+        stroke: param.stroke ?? panelObj.stroke,
         zIndex: param.zIndex?? 10,
         // cursor: 'pointer',
       },
@@ -248,17 +286,21 @@ function createImgEntity(canvas: Canvas, param: ImgDataItem) {
   
   canvas.appendChild(group);
 
+  group.addEventListener('click', (e: MouseEvent) => {
+    emitRef.value('deviceClick', { device: group, event: e });
+  })
+
   // 高亮
-  addEmphaticToImgGroupWhenHover(group);
-
-  // 拖拽, 已添加到画布时前提
-  addDragToImgGroup(canvas, group)
-
+  addClickChooseForReal(canvas, group);
+  
   // 添加旋转功能
   addRotateToEntity(canvas, group)
 
   // 添加缩放功能
   addScaleToEntity(canvas, group)
+
+  // 拖拽, 已添加到画布时前提
+  addDragToImgGroup(canvas, group)
 
   // 自定义右键菜单
   customContextMenu(canvas, group, getImgContextMenuData(canvas, group))
@@ -298,43 +340,68 @@ function updateImgEntityWidth(canvas: Canvas, group: DisplayObject) {
   }
   
   scaleEntity.setLocalPosition(rectEntity.style.width, rectEntity.style.height / 2);
-  rotateEntity.setLocalPosition(rectEntity?.style.width ?? 0, -20)
+  rotateEntity.setLocalPosition(rectEntity?.style.width ?? 0, -20);
+
+  // 更新映射
+  updateCanvasDataRfElByReal(group);
 }
 
 /**
  * @description: 拖拽元件过来新增
  */
-function imgDropHandle(canvas: Canvas, event:any) {
+function canvasOutBoxDropHandle(canvas: Canvas, event:any) {
   event.preventDefault();
   const point = client2Canvas(canvas, [event.clientX, event.clientY])
   
   const data = event.dataTransfer.getData('Text');
   const item = panelData.value.find(item => item.key === data);
   console.log('%c [ item ]-160', 'font-size:13px; background:#000; color:#fdffcd;', item);
+  let newEl: undefined | ImgDataItem | TextDataItem = undefined;
+  
   if(item) {
-
-    createImgEntity(canvas, {
+    newEl = {
       ...item,
+      type: 'imgData',
       id: uuidv4(),
       coord: [point.x, point.y],
-    })
+      editType: {
+        isAdd: true
+      }
+    }
   } else if(data === 'text') {
-    createText(canvas, {
+    newEl = {
       id: uuidv4(),
+      type: 'textData',
       coord: [point.x, point.y],
-      box: textDefaultStyle.box,
-      text: textDefaultStyle.text,
-    })
-  } else if(data === 'dataBox') {
-    createText(canvas, {
+      box: { ...textDefaultStyle.box },
+      text: { ...textDefaultStyle.text },
+      editType: {
+        isAdd: true
+      }
+    }
+  }else if(data === 'dataBox') {
+    newEl = {
       id: uuidv4(),
+      type: 'textData',
       coord: [point.x, point.y],
       box: textDefaultStyle.box,
       text: textDefaultStyle.text,
       isDataBox: true,
       dataOption: [{
         key: '',
-      }]
+      }],
+      editType: {
+        isAdd: true
+      }
+    }
+  }
+
+  if(newEl) {
+    createRealEl(canvas, newEl);
+    addCanvasDataRfEl(newEl);
+    retreatAndAdvance.value.addLog({
+      type: 'add',
+      advanceSnapshot: clone(newEl),
     })
   }
 }
@@ -344,7 +411,7 @@ function imgDropHandle(canvas: Canvas, event:any) {
  */
 function client2Canvas(canvas: Canvas, clientPoint: [number, number]) {
   // - 计算当前点坐标
-  let point = canvas.client2Viewport({ x: clientPoint[0], y: clientPoint[1]});
+  let point = canvas.client2Viewport({ x: clientPoint[0], y: clientPoint[1] });
   point =canvas.viewport2Canvas(point);
   // -  计算当前点和画布中心点的距离，
   // const distance = {
@@ -365,7 +432,7 @@ function client2Canvas(canvas: Canvas, clientPoint: [number, number]) {
  * @description: 绘制管道
  * 鼠标左键点击一下记下一个点的坐标，鼠标双击完成绘制
  */
-function drawLine(canvas: Canvas, param: {
+function drawLineReal(canvas: Canvas, param: {
   coord: [number, number] [],
   style?: any,
   angle90?: boolean, // 转角是否必须90度
@@ -376,7 +443,10 @@ function drawLine(canvas: Canvas, param: {
   disableDragCamera.value = true;
   disableDragDevice.value = true;
 
-  let lineCoords: [number, number][] = param?.coord ?? [];
+  if(chooseDevice.value) removeEmphatic(canvas.document.querySelector(`#${chooseDevice.value.id}`)!);
+  chooseDevice.value = undefined;
+
+  drawLineInfo.coord = param?.coord ?? [];
 
   const polyline = new Polyline({
     id: uuidv4(),
@@ -385,29 +455,60 @@ function drawLine(canvas: Canvas, param: {
     style: {
       ...polyLineDefaultStyle,
       lineDash: polyLineDefaultStyle.isDash? [polyLineDefaultStyle.dashLen, polyLineDefaultStyle.dashGap]: 0,
-      points: JSON.parse(JSON.stringify(lineCoords)),
+      points: JSON.parse(JSON.stringify(drawLineInfo.coord)),
       cursor: 'pointer',
-      zIndex: 10,
+      zIndex: 9,
       ...param?.style,
     },
   });
-  (polyline as DisplayObject).setAttribute('data-angle90', param?.angle90 ?? false);
+
+  const newEl: LineDataItem = {
+    id: polyline.id,
+    type: 'lineData',
+    angle90: param.angle90,
+    coord: drawLineInfo.coord,
+    zIndex: 9,
+    editType: {
+      isAdd: true
+    },
+    
+    style: {
+      stroke: polyline.style.stroke as string,
+      lineWidth: polyline.style.lineWidth as number,
+      lineJoin: polyline.style.lineJoin!,
+      lineCap: polyline.style.lineCap!,
+      isDash: polyline.style.lineDash? 1 : 0,
+      dashLen: (polyline.style.lineDash as any)?.[0],
+      dashGap: (polyline.style.lineDash as any)?.[1],
+    }
+  }
 
   console.log('polyline.id:', polyline.id)
 
   canvas.appendChild(polyline);
+  addCanvasDataRfEl(newEl);
+  drawLineInfo.realEl = polyline;
+  drawLineInfo.rfEl = newEl;
+
+  polyline.addEventListener('click', (e: MouseEvent) => {
+    console.log('%c [ e ]-266', 'font-size:13px; background:#28ccc9; color:#6cffff;', e);
+    emitRef.value('deviceClick', { device: polyline, event: e });
+  })
+
   // 添加可拖拽功能
   addDragToImgGroup(canvas, polyline);
   // 添加自定义右键菜单
   customContextMenu(canvas, polyline, getLineContextMenuData(canvas, polyline))
   // 添加移入高亮效果
-  addEmphaticToImgGroupWhenHover(polyline);
+  addClickChooseForReal(canvas, polyline);
 
   // 鼠标左键点击一下记下一个点的坐标，鼠标双击完成绘制
+  let perTapTime = new Date();
   const clickHandle = (event: any) => {
 
-    //双击完成绘制
-    if(event.detail === 2) {
+    // 两次点击的时间少于500ms判断为双击
+    const nowTapTime = new Date();
+    if(nowTapTime.getTime() - perTapTime.getTime() < 300) {
       // 添加可拖拽节点
       addDragNodePointToLine(canvas, polyline)
       
@@ -416,38 +517,38 @@ function drawLine(canvas: Canvas, param: {
       canvas.removeEventListener('mousemove', hoverHandle);
       disableDragCamera.value = false;
       disableDragDevice.value = false;
+
+      newEl.coord = drawLineInfo.coord;
+
+      retreatAndAdvance.value.addLog({
+        type: 'add',
+        advanceSnapshot: clone(newEl),
+      })
       return;
     }
+    perTapTime = nowTapTime;
 
     // 计算坐标
     const point = client2Canvas(canvas, [event.clientX, event.clientY])
 
-    if(param?.angle90 && lineCoords.length) {
-      const cornerPoint: [number, number] = [lineCoords[lineCoords.length - 1][0], point.y];
-      lineCoords.push(cornerPoint)
+    if(param?.angle90 && drawLineInfo.coord.length && (Math.abs(point.x - drawLineInfo.coord[drawLineInfo.coord.length - 1][0]) > 10 && Math.abs(point.y - drawLineInfo.coord[drawLineInfo.coord.length - 1][1]) > 10) ) {
+      const cornerPoint: [number, number] = [drawLineInfo.coord[drawLineInfo.coord.length - 1][0], point.y];
+      drawLineInfo.coord.push(cornerPoint)
     }
 
-    lineCoords.push([point.x, point.y]);
-    polyline.style.points = JSON.parse(JSON.stringify(lineCoords));
-
-    // 首个点出现后把线添加到画布上
-    // if(lineCoords.length === 1) {
-    //   canvas.appendChild(polyline);
-    //   // 添加可拖拽功能
-    //   addDragToImgGroup(canvas, polyline);
-    //   // 添加自定义右键菜单
-    //   customContextMenu(canvas, polyline, getLineContextMenuData(canvas, polyline))
-    // }
+    drawLineInfo.coord.push([point.x, point.y]);
+    polyline.style.points = JSON.parse(JSON.stringify(drawLineInfo.coord));
   };
   canvas.addEventListener('click', clickHandle);
 
   // 鼠标悬浮移动时 线的终点跟随移动
   const hoverHandle = (event: any) => {
-    let temCoord = JSON.parse(JSON.stringify(lineCoords))
+    // console.log('%c [ event ]-544', 'font-size:13px; background:#11bd91; color:#55ffd5;', clone(event));
+    const temCoord = JSON.parse(JSON.stringify(drawLineInfo.coord))
     // 计算坐标
     const point = client2Canvas(canvas, [event.clientX, event.clientY])
 
-    if(param?.angle90 && temCoord.length) {
+    if(param?.angle90 && temCoord.length && (Math.abs(point.x - temCoord[temCoord.length - 1][0]) > 10 && Math.abs(point.y - temCoord[temCoord.length - 1][1]) > 10) ) {
       const cornerPoint: [number, number] = [temCoord[temCoord.length - 1][0], point.y];
       temCoord.push(cornerPoint)
     }
@@ -460,7 +561,7 @@ function drawLine(canvas: Canvas, param: {
 /**
  * @description: 新增管道
  */
-function createLine(canvas: Canvas, param: lineDataItem) {
+function createLineReal(canvas: Canvas, param: LineDataItem) {
   const polyline = new Polyline({
     id: param.id,
     name: 'line',
@@ -471,17 +572,18 @@ function createLine(canvas: Canvas, param: lineDataItem) {
       lineDash: param.style.isDash? [param.style.dashLen ?? 0, param.style.dashGap ?? 0]: 0,
       points: JSON.parse(JSON.stringify(param.coord)),
       cursor: 'pointer',
-      zIndex: param.zIndex ?? 10,
+      zIndex: param.zIndex ?? 9,
     },
   });
-  (polyline as DisplayObject).setAttribute('data-angle90', param?.angle90 ?? false);
-
-  console.log('polyline.id:', polyline.id)
 
   canvas.appendChild(polyline);
 
+  polyline.addEventListener('click', (e: MouseEvent) => {
+    emitRef.value('deviceClick', { device: polyline, event: e });
+  })
+
   // 添加移入高亮效果
-  addEmphaticToImgGroupWhenHover(polyline);
+  addClickChooseForReal(canvas, polyline);
 
   // 添加可拖拽节点
   addDragNodePointToLine(canvas, polyline, { defaultHidden: true })
@@ -490,7 +592,9 @@ function createLine(canvas: Canvas, param: lineDataItem) {
   addDragToImgGroup(canvas, polyline);
 
   // 添加自定义右键菜单
-  customContextMenu(canvas, polyline, getLineContextMenuData(canvas, polyline))
+  customContextMenu(canvas, polyline, getLineContextMenuData(canvas, polyline));
+
+  return polyline;
 }
 
 
@@ -524,42 +628,56 @@ function addDragNodePointToLine(canvas: Canvas, polyline: Polyline, param?: {
   }
 
   const camera = canvas.getCamera();
+  let retreatSnapshot: ImgDataItem | LineDataItem | TextDataItem;
 
   for(const nodePoint of nodePoints) {
     const interactable =  interact(nodePoint as any, {
       // 直接传入节点1
-        context: canvas.document as any, // 传入上下文
-      }).draggable({
-        onstart: function (event) {
-          if(disableDragDevice.value) return;
-          // 禁止画布移动
-          disableDragCamera.value = true;
-        },
-        onmove: function (event) {
-          if(disableDragDevice.value) return;
+      context: canvas.document as any, // 传入上下文
+    }).draggable({
+      onstart: function (event) {
+        if(disableDragDevice.value) return;
+        // 禁止画布移动
+        disableDragCamera.value = true;
+        retreatSnapshot = clone(getCanvasDataRfEl(polyline.id)!);
+      },
+      onmove: function (event) {
+        if(disableDragDevice.value) return;
 
-          const pointIndex = event.target.classList[2];
+        const pointIndex = event.target.classList[2];
     
-          // interact.js 告诉我们的偏移量
-          const { dx, dy } = event;
-          const zoom = camera.getZoom();
+        // interact.js 告诉我们的偏移量
+        const { dx, dy } = event;
+        const zoom = camera.getZoom();
 
-          polyline.style.points[pointIndex][0] += dx / zoom;
-          polyline.style.points[pointIndex][1] += dy / zoom;
+        polyline.style.points[pointIndex][0] += dx / zoom;
+        polyline.style.points[pointIndex][1] += dy / zoom;
     
-          // 改变节点1位置
-          nodePoint.translateLocal(dx / zoom, dy / zoom);
-        },
-        onend: function (event) {
-          if(disableDragDevice.value) return;
+        // 改变节点1位置
+        nodePoint.translateLocal(dx / zoom, dy / zoom);
+
+        // 更新映射的数据
+        updateCanvasDataRfElByReal(polyline);
+      },
+      onend: function (event) {
+        if(disableDragDevice.value) return;
+
+        const canvasDataEl = getCanvasDataRfEl(polyline.id)!;
+        canvasDataEl.editType.isUpdate = true;
+
+        retreatAndAdvance.value.addLog({
+          type: 'update',
+          retreatSnapshot,
+          advanceSnapshot: clone(canvasDataEl),
+        })
     
-          // console.log('%c [ event ]-67', 'font-size:13px; background:#afb2d7; color:#f3f6ff;', event);
-          // 恢复画布移动
-          setTimeout(() => {
-            disableDragCamera.value = false;
-          }, 100);
-        },
-      });
+        // console.log('%c [ event ]-67', 'font-size:13px; background:#afb2d7; color:#f3f6ff;', event);
+        // 恢复画布移动
+        setTimeout(() => {
+          disableDragCamera.value = false;
+        }, 100);
+      },
+    });
 
     // 在元素上存储 interactable 引用，以便后续可以销毁
     (nodePoint as any)._interactable = interactable;
@@ -616,7 +734,7 @@ function getAngleOfThreePoint(
  * @description: 给元素添加旋转功能
  */
 function addRotateToEntity(canvas: Canvas, group: DisplayObject) {
-  let rectEntity: DisplayObject = group.querySelector('.imgBox__rect')!;
+  const rectEntity: DisplayObject = group.querySelector('.imgBox__rect')!;
   const innerEntity: DisplayObject = group.querySelector('.imgBox__inner')!;
 
   const rotateImg = new Image({
@@ -671,46 +789,62 @@ function addRotateToEntity(canvas: Canvas, group: DisplayObject) {
   canvas.appendChild(beginP);
   canvas.appendChild(endP);
 
+  let retreatSnapshot: ImgDataItem | LineDataItem | TextDataItem;
 
   const interactable = interact(rotateImg as any, {
     // 直接传入节点1
-      context: canvas.document as any, // 传入上下文
-    }).draggable({
-      onstart: function (event) {
-        if(disableDragDevice.value) return;
-        boxBound = rectEntity.getBBox();
-        // 禁止画布移动
-        disableDragCamera.value = true;
-        const beginCanvasP = client2Canvas(canvas, [event.clientX, event.clientY])
-        beginCoord = [beginCanvasP.x, beginCanvasP.y];
-        centerCoord = [boxBound.x + boxBound.width / 2, boxBound.y+boxBound.height / 2]
-        beginRotate = innerEntity.getLocalEulerAngles();
+    context: canvas.document as any, // 传入上下文
+  }).draggable({
+    onstart: function (event) {
+      console.log('%c [ event ]-749', 'font-size:13px; background:#6c15fa; color:#b059ff;', event);
+      if(disableDragDevice.value) return;
+      boxBound = rectEntity.getBBox();
+      // 禁止画布移动
+      disableDragCamera.value = true;
+      const beginCanvasP = client2Canvas(canvas, [event.clientX, event.clientY])
+      beginCoord = [beginCanvasP.x, beginCanvasP.y];
+      centerCoord = [boxBound.x + boxBound.width / 2, boxBound.y+boxBound.height / 2]
+      beginRotate = innerEntity.getLocalEulerAngles();
 
-        beginP.setPosition(beginCoord).style.visibility = 'visible';
-        centerP.setPosition(centerCoord).style.visibility = 'visible';
-        endP.setPosition(beginCoord).style.visibility = 'visible';
-      },
-      onmove: function (event) {
-        if(disableDragDevice.value) return;
-        const endCanvasP = client2Canvas(canvas, [event.clientX, event.clientY])
+      beginP.setPosition(beginCoord).style.visibility = 'visible';
+      centerP.setPosition(centerCoord).style.visibility = 'visible';
+      endP.setPosition(beginCoord).style.visibility = 'visible';
 
-        const angle = getAngleOfThreePoint(centerCoord, beginCoord, [endCanvasP.x, endCanvasP.y])
-        innerEntity.setLocalEulerAngles(angle+beginRotate)
+      retreatSnapshot = clone(getCanvasDataRfEl(group.id)!);
+    },
+    onmove: function (event) {
+      if(disableDragDevice.value) return;
+      const endCanvasP = client2Canvas(canvas, [event.clientX, event.clientY])
 
-        endP.setPosition([endCanvasP.x, endCanvasP.y])
-      },
-      onend: function (event) {
-        if(disableDragDevice.value) return;
-        centerP.style.visibility = 'hidden';
-        beginP.style.visibility = 'hidden';
-        endP.style.visibility = 'hidden';
+      const angle = getAngleOfThreePoint(centerCoord, beginCoord, [endCanvasP.x, endCanvasP.y])
+      innerEntity.setLocalEulerAngles(angle+beginRotate)
 
-        // 恢复画布移动
-        setTimeout(() => {
-          disableDragCamera.value = false;
-        }, 100);
-      },
-    });
+      endP.setPosition([endCanvasP.x, endCanvasP.y])
+
+      // 更新映射的数据
+      updateCanvasDataRfElByReal(group);
+    },
+    onend: function (event) {
+      if(disableDragDevice.value) return;
+      centerP.style.visibility = 'hidden';
+      beginP.style.visibility = 'hidden';
+      endP.style.visibility = 'hidden';
+
+      const canvasDataEl = getCanvasDataRfEl(group.id)!;
+      canvasDataEl.editType.isUpdate = true;
+
+      retreatAndAdvance.value.addLog({
+        type: 'update',
+        retreatSnapshot,
+        advanceSnapshot: clone(canvasDataEl),
+      })
+
+      // 恢复画布移动
+      setTimeout(() => {
+        disableDragCamera.value = false;
+      }, 100);
+    },
+  });
 
   // 在元素上存储 interactable 引用，以便后续可以销毁
   (rotateImg as any)._interactable = interactable;
@@ -739,11 +873,13 @@ function addScaleToEntity(canvas: Canvas, group: DisplayObject) {
       r: 6,
       fill: '#1890FF',
       cursor: 'ew-resize',
-      visibility: 'hidden'
+      visibility: 'hidden',
+      // 增加z-index提高优先级
+      zIndex: 100
     },
   });
 
-  let rectEntity = group.querySelector('.imgBox__rect')!
+  const rectEntity = group.querySelector('.imgBox__rect')!
   circle.translateLocal(rectEntity.style.width, rectEntity.style.height / 2)
 
   innerEntity.appendChild(circle);
@@ -753,12 +889,28 @@ function addScaleToEntity(canvas: Canvas, group: DisplayObject) {
   }
   let beginCoord: [number, number] = [0, 0];
 
+  let retreatSnapshot: ImgDataItem | LineDataItem | TextDataItem;
 
   interact(circle as any, {
   // 直接传入节点1
     context: canvas.document as any, // 传入上下文
+    // 设置更高的优先级
+    actionChecker: function(pointer: any, event: any, action: any) {
+      // 返回一个更高的优先级值
+      return action ? { name: action.name, priority: 1000 } : null;
+    },
+    // 在这里设置 preventDefault
+    preventDefault: 'always',
   }).draggable({
+    // 阻止事件冒泡，防止触发父元素的拖拽
+    // 设置更高的优先级
+    ignoreFrom: '.imgBox__contentIcon',
     onstart: function (event) {
+      // 阻止事件冒泡
+      event.stopPropagation();
+      event.stopImmediatePropagation();
+      
+      console.log('%c [ event ]-835', 'font-size:13px; background:#68fc3b; color:#acff7f;', event);
       if(disableDragDevice.value) return;
       // 禁止画布移动
       disableDragCamera.value = true;
@@ -769,8 +921,10 @@ function addScaleToEntity(canvas: Canvas, group: DisplayObject) {
         scale: [1, 1, 1], // imageEntity.getLocalScale() as any,
       }
 
-      let beginPoint = client2Canvas(canvas, [event.clientX, event.clientY]);
+      const beginPoint = client2Canvas(canvas, [event.clientX, event.clientY]);
       beginCoord = [beginPoint.x, beginPoint.y];
+
+      retreatSnapshot = clone(getCanvasDataRfEl(group.id)!);
     },
     onmove: function (event) {
       if(disableDragDevice.value) return;
@@ -784,7 +938,7 @@ function addScaleToEntity(canvas: Canvas, group: DisplayObject) {
         Math.pow(curCoord[0] - centerPoint[0], 2) +
         Math.pow(curCoord[1] - centerPoint[1], 2)
       );
-      // console.log('%c [ curToCenterDistance ]-702', 'font-size:13px; background:#000; color:#61f7ff;', curToCenterDistance);
+      console.log('%c [ curToCenterDistance ]-702', 'font-size:13px; background:#000; color:#61f7ff;', curToCenterDistance);
 
       // 计算开始点到中心点的距离
       const beginToCenterDistance = Math.sqrt(
@@ -813,6 +967,16 @@ function addScaleToEntity(canvas: Canvas, group: DisplayObject) {
       if(disableDragDevice.value) return;
       updateImgEntityWidth(canvas, group)
 
+      const canvasDataEl = getCanvasDataRfEl(group.id)!;
+      canvasDataEl.editType.isUpdate = true;
+
+      retreatAndAdvance.value.addLog({
+        type: 'update',
+        retreatSnapshot,
+        advanceSnapshot: clone(canvasDataEl),
+      })
+
+
       setTimeout(() => {
         disableDragCamera.value = false;
       }, 100)
@@ -829,22 +993,22 @@ function addWheel(canvas: Canvas) {
   const minZoom = 0;
   const maxZoom = Infinity;
   canvas.addEventListener('wheel', (e: any) => {
-      e.preventDefault();
+    e.preventDefault();
 
-      let zoom = e.deltaY < 0? camera.getZoom()  / 0.95: camera.getZoom() * 0.95;
-      zoom = Math.max(minZoom, Math.min(maxZoom, zoom));
+    let zoom = e.deltaY < 0? camera.getZoom()  / 0.95: camera.getZoom() * 0.95;
+    zoom = Math.max(minZoom, Math.min(maxZoom, zoom));
 
-      const { x, y } = canvas.client2Viewport({ x: e.clientX, y: e.clientY });
+    const { x, y } = canvas.client2Viewport({ x: e.clientX, y: e.clientY });
 
-      camera.setZoomByViewportPoint(zoom, [x, y])
-    }, { passive: false } );
+    camera.setZoomByViewportPoint(zoom, [x, y])
+    // camera.setZoom(zoom);
+  }, { passive: false } );
 }
 
 /**
  * @description: 使用 hammer.js 实现相机移动
  */
 function moveCamera(canvas: Canvas) {
-  const camera = canvas.getCamera();
   const hammer = new Hammer(canvas as any);
 
   let preCoord = [0, 0];
@@ -856,8 +1020,8 @@ function moveCamera(canvas: Canvas) {
     if(disableDragCamera.value) return;
 
     // const zoom = Math.pow(2, camera.getZoom()-1); // 如果需要实现类似3d空间的近快远慢 用这个
-    const zoom = camera.getZoom();
-    camera.pan((-ev.deltaX + preCoord[0]) / zoom, (-ev.deltaY + preCoord[1]) / zoom);
+    const zoom = canvas.getCamera().getZoom();
+    canvas.getCamera().pan((-ev.deltaX + preCoord[0]) / zoom, (-ev.deltaY + preCoord[1]) / zoom);
     preCoord = [ev.deltaX, ev.deltaY];
   });
 
@@ -868,12 +1032,13 @@ function getDataOptionText(dataOption: TextDataItem['dataOption']) {
 
   let text = '';
   for(let i = 0; i<dataOption.length; i++) {
-    console.log('%c [ serverData.value ]-873', 'font-size:13px; background:#166875; color:#5aacb9;', serverData.value);
-
     const item = dataOption[i];
     let value = serverData.value[item.key];
-    if(item.equation) {
-      // TODO: 这里处理公式转换和小数位保留
+    if(item.equation && value) {
+      // value = Tool.GetValueOfEvaluate(value, item.equation);
+    }
+    if(value) {
+      // value = Tool.NumberRoundTo(value, item.decimal ?? 2);
     }
     if(i !== 0) text += '\n'
     text += `${item.label ?? ''} ${ value ?? '--' } ${ item.unit ?? ''}`
@@ -885,7 +1050,7 @@ function getDataOptionText(dataOption: TextDataItem['dataOption']) {
 /**
  * @description: 添加文本框
  */
-function createText(canvas: Canvas, param: TextDataItem) {
+function createTextReal(canvas: Canvas, param: TextDataItem) {
   const width = param.box.width + param.text.dx * 2;
   const height = param.box.height + param.text.dy * 2;
 
@@ -895,16 +1060,12 @@ function createText(canvas: Canvas, param: TextDataItem) {
     className: 'textBox',
     style: {
       cursor: 'pointer',
-      zIndex: param.zIndex ?? 10,
+      zIndex: param.zIndex ?? 11,
     }
   });
   group.setLocalPosition(param.coord[0], param.coord[1]);
   group.translateLocal(-width/2, -height/2);
   group.setOrigin(width/2, height/2);
-
-  group.setAttribute('data-isDataBox', param.isDataBox? 'true':'false');
-  group.setAttribute('data-dataOption', param.isDataBox ? JSON.stringify(param.dataOption ?? []):'');
-
 
   // 内部加个box做旋转
   const groupInner = new Group({
@@ -914,6 +1075,9 @@ function createText(canvas: Canvas, param: TextDataItem) {
   groupInner.setOrigin(width/2, height/2);
   // if(param.box.rotate) groupInner.setLocalEulerAngles(param.box.rotate);
   group.appendChild(groupInner);
+
+  let text = param.text.text;
+  if(param.isDataBox && param.dataOption) text = getDataOptionText(param.dataOption);
 
   // 用矩形背景框
   const box = new Rect({
@@ -926,9 +1090,6 @@ function createText(canvas: Canvas, param: TextDataItem) {
     }
   })
   groupInner.appendChild(box);
-
-  let text = param.text.text;
-  if(param.isDataBox && param.dataOption) text = getDataOptionText(param.dataOption);
 
   const textEntity = new Text({
     name: 'textBox__text',
@@ -946,217 +1107,232 @@ function createText(canvas: Canvas, param: TextDataItem) {
 
   canvas.appendChild(group);
 
+  group.addEventListener('click', (e: MouseEvent) => {
+    // console.log('%c [ e ]-266', 'font-size:13px; background:#28ccc9; color:#6cffff;', e);
+    emitRef.value('deviceClick', { device: group, event: e });
+  })
+
   // 高亮
-  addEmphaticToImgGroupWhenHover(group);
+  addClickChooseForReal(canvas, group);
 
   // 拖拽, 已添加到画布时前提
   addDragToImgGroup(canvas, group)
 
   // 添加自定义右键菜单
   customContextMenu(canvas, group, getLineContextMenuData(canvas, group))
+
+  return group;
 }
 
-
-/**
- * @description: 添加文字Html-暂时不用，因为不方便做拖拽
- */
-function addTextHtml(canvas: Canvas, param: {
-  event:any
-  text?: string,
-}) {
-  const point = client2Canvas(canvas, [param.event.clientX, param.event.clientY])
-  const zoom = canvas.getCamera().getZoom();
-
-  let innerHtml = `
-    <div class="textBox" style="background-color: #0E2C46; color: #fff; padding: 4px 8px;">
-      ${param?.text ?? '文字内容'}
-    </div>
-  `
-  
-  // 自定义右键菜单
-  const html = new HTML({
-      id: uuidv4(),
-      name: 'textBoxHtml',
-      class: 'textBoxHtml',
-      style: {
-          x: point.x,
-          y: point.y,
-          width: 100,
-          height: 100,
-          innerHTML: innerHtml,
-          pointerEvents: 'all',
-      },
-  });
-  html.setLocalScale(1/zoom);
-  html.translateLocal(-50+50/zoom, -50+50/zoom)
-  canvas.appendChild(html);
-}
 
 /**
  * @description: 删除元素
  */
-function deleteElement(canvas: Canvas, id: string) {
+function delateRealEl(canvas: Canvas, id: string) {
   if(chooseDevice.value?.id === id) chooseDevice.value= undefined;
 
   canvas.document.querySelector('#'+id)?.remove();
+
+  // 更新映射的数据
+  // for(const key of Object.keys(canvasDataRef.value)) {
+  //   for(let i = 0; i< canvasDataRef.value[key].length; i++) {
+  //     if(canvasDataRef.value[key][i].id === id) {
+  //       retreatAndAdvance.value.addLog({  type: 'remove', snipObj: canvasDataRef.value[key][i] });
+
+  //       canvasDataRef.value[key].splice(i, 1);
+  //       break;
+  //     }
+  //   }
+  // }
 }
 
 /**
- * @description: img元素转外部数据
+ * @description: 根据画布元素更新映射
+ * @param {DisplayObject} el
  */
-function imgToDataItem(el: DisplayObject): ImgDataItem {
+function updateCanvasDataRfElByReal(el: DisplayObject) {
+  if(el.name === 'imgBox') {
+    return updateImgDataByEl(el)
+  } else if(el.name === 'line') {
+    return updateLineDataByEl(el)
+  } else if(el.name === 'textBox') {
+    return updateTextDataByEl(el)
+  }
+}
+
+function updateImgDataByEl(el: DisplayObject): ImgDataItem {
+  const canvasDataEl = getCanvasDataRfEl(el.id) as ImgDataItem;
+
   const rectEntity = el.querySelector('.imgBox__rect') as DisplayObject;
 
-  const itemObj: ImgDataItem = {
-    id: el.id,
-    zIndex: el.style.zIndex,
-    key: el.getAttribute('data-imgKey'),
-    width: rectEntity.style.width - imgPadding * 2,
-    height: rectEntity.style.height - imgPadding * 2,
-    coord: [
-      el.getLocalPosition()[0] + rectEntity.style.width / 2, 
-      el.getLocalPosition()[1] + rectEntity.style.height / 2
-    ],
-    rotate: (el.querySelector('.imgBox__inner') as DisplayObject).getLocalEulerAngles(),
-  }
+  canvasDataEl.zIndex = el.style.zIndex;
+  canvasDataEl.width = rectEntity.style.width - imgPadding * 2;
+  canvasDataEl.height = rectEntity.style.height - imgPadding * 2;
+  canvasDataEl.coord = [
+    el.getLocalPosition()[0] + rectEntity.style.width / 2, 
+    el.getLocalPosition()[1] + rectEntity.style.height / 2,
+  ]
+  canvasDataEl.rotate = (el.querySelector('.imgBox__inner') as DisplayObject).getLocalEulerAngles();
 
   if(el.classList[1] === 'pathEntityBox') {
-    itemObj.color = el.querySelector('.imgBox__path')?.style.fill ?? '';
-    itemObj.stroke = el.querySelector('.imgBox__path')?.style.stroke ?? '';
-    itemObj.scale = (el.querySelector('.imgBox__path') as DisplayObject).getLocalScale()[0]
+    canvasDataEl.color = el.querySelector('.imgBox__path')?.style.fill ?? '';
+    canvasDataEl.stroke = el.querySelector('.imgBox__path')?.style.stroke ?? '';
+    canvasDataEl.scale = (el.querySelector('.imgBox__path') as DisplayObject).getLocalScale()[0]
   }
 
-  return JSON.parse(JSON.stringify(itemObj))
+  return canvasDataEl
 }
 
-/**
- * @description: 管道元素转为外部数据
- */
-function lineToDataItem(el: DisplayObject): lineDataItem {
+function updateLineDataByEl(el: DisplayObject): LineDataItem {
+  const canvasDataEl = getCanvasDataRfEl(el.id) as LineDataItem;
+
   const offset = el.getLocalPosition();
-  const itemObj: lineDataItem = {
-    id: el.id,
-    angle90: el.getAttribute('data-angle90'),
-    coord: el.style.points.map((item: any) => [item[0]+offset[0], item[1]+offset[1]]),
-    zIndex: el.style.zIndex,
-    
-    style: {
-      stroke: el.style.stroke,
-      lineWidth: el.style.lineWidth,
-      lineJoin: el.style.lineJoin,
-      lineCap: el.style.lineCap,
-      isDash: el.style.lineDash? 1 : 0,
-      dashLen: (el.style.lineDash as any)?.[0],
-      dashGap: (el.style.lineDash as any)?.[1],
-    }
+
+  canvasDataEl.coord = el.style.points.map((item: any) => [item[0]+offset[0], item[1]+offset[1]]);
+  canvasDataEl.zIndex = el.style.zIndex;
+  canvasDataEl.style = {
+    stroke: el.style.stroke,
+    lineWidth: el.style.lineWidth,
+    lineJoin: el.style.lineJoin,
+    lineCap: el.style.lineCap,
+    isDash: el.style.lineDash? 1 : 0,
+    dashLen: (el.style.lineDash as any)?.[0],
+    dashGap: (el.style.lineDash as any)?.[1],
   }
 
-  return JSON.parse(JSON.stringify(itemObj))
+  return canvasDataEl
 }
 
-/**
- * @description: 文本元素转为外部数据
- */
-function textToDataItem(el: DisplayObject): TextDataItem {
+function updateTextDataByEl(el: DisplayObject): TextDataItem {
+  const canvasDataEl = getCanvasDataRfEl(el.id) as TextDataItem;
+
   const rectEntity = el.querySelector('.textBox__rect') as DisplayObject;
   const textEntity = el.querySelector('.textBox__text') as DisplayObject;
 
-  const itemObj: TextDataItem = {
-    id: el.id,
-    coord: [
-      (el as DisplayObject).getLocalPosition()[0] + rectEntity.style.width / 2, 
-      (el as DisplayObject).getLocalPosition()[1] + rectEntity.style.height / 2,
-    ],
-    zIndex: el.style.zIndex,
-
-    box: {
-      width: rectEntity.style.width,
-      height: rectEntity.style.height,
-      fill: rectEntity.style.fill,
-      lineWidth: rectEntity.style.lineWidth,
-      stroke: rectEntity.style.stroke,
-      radius: rectEntity.style.radius,
-    },
-    text: {
-      text: textEntity.style.text,
-      fontSize: textEntity.style.fontSize,
-      fill: textEntity.style.fill,
-      fontWeight: textEntity.style.fontWeight,
-      textAlign: textEntity.style.textAlign,
-      lineHeight: textEntity.style.lineHeight,
-      letterSpacing: textEntity.style.letterSpacing,
-      dx: textEntity.style.dx,
-      dy: textEntity.style.dy,
-    },
+  canvasDataEl.coord = [
+    (el as DisplayObject).getLocalPosition()[0] + rectEntity.style.width / 2, 
+    (el as DisplayObject).getLocalPosition()[1] + rectEntity.style.height / 2,
+  ];
+  canvasDataEl.zIndex = el.style.zIndex;
+  canvasDataEl.box = {
+    width: rectEntity.style.width,
+    height: rectEntity.style.height,
+    fill: rectEntity.style.fill,
+    lineWidth: rectEntity.style.lineWidth,
+    stroke: rectEntity.style.stroke,
+    radius: rectEntity.style.radius,
+  };
+  canvasDataEl.text = {
+    text: textEntity.style.text,
+    fontSize: textEntity.style.fontSize,
+    fill: textEntity.style.fill,
+    fontWeight: textEntity.style.fontWeight,
+    textAlign: textEntity.style.textAlign,
+    lineHeight: textEntity.style.lineHeight,
+    letterSpacing: textEntity.style.letterSpacing,
+    dx: textEntity.style.dx,
+    dy: textEntity.style.dy,
   }
-  itemObj.box.width -= itemObj.text.dx * 2;
-  itemObj.box.height -= itemObj.text.dy * 2;
+  canvasDataEl.box.width -= canvasDataEl.text.dx * 2;
+  canvasDataEl.box.height -= canvasDataEl.text.dy * 2;
 
-  if(el.getAttribute('data-isDataBox') === 'true') {
-    itemObj.isDataBox = true;
-    itemObj.dataOption = JSON.parse(el.getAttribute('data-dataOption')?? '[]');
-  }
-
-  return JSON.parse(JSON.stringify(itemObj))
+  return canvasDataEl
 }
 
 /**
  * @description: 调整元素zIndex
  */
-function updateZIndex(canvas: Canvas, id: string, zIndex: number) {
+function updateZIndexHandle(canvas: Canvas, id: string, zIndex: number) {
   const element = canvas.document.querySelector(`#${id}`) as DisplayObject;
-        
-  let dataItem: ImgDataItem | lineDataItem | TextDataItem | undefined;
+  const canvasDataEl = getCanvasDataRfEl(id)!;
+  const retreatSnapshot =  clone(canvasDataEl);
 
-  if(element.name === 'imgBox') {
-    dataItem = imgToDataItem(element);
-    dataItem.zIndex = zIndex;
-    element.remove();
-    createImgEntity(canvas, dataItem)
-  } else if(element.name === 'line') {
-    dataItem = lineToDataItem(element);
-    dataItem.zIndex = zIndex;
-    element.remove();
-    createLine(canvas, dataItem)
-  } else if(element.name === 'textBox') {
-    dataItem = textToDataItem(element);
-    dataItem.zIndex = zIndex;
-    element.remove();
-    createText(canvas, dataItem)
+  canvasDataEl.zIndex = zIndex;
+  element.remove();
+  createRealEl(canvas, canvasDataEl);
+
+  canvasDataEl.editType.isUpdate = true;
+  retreatAndAdvance.value.addLog({
+    type: 'update',
+    retreatSnapshot,
+    advanceSnapshot: clone(canvasDataEl),
+  })
+}
+
+/**
+ * @description: 删除元素
+ */
+function removeElHandle(canvas: Canvas, id: string) {
+  delateRealEl(canvas, id);
+
+  // 如果是新增后的删除，则需要重新添加 // 如果是本来就有的删除，则需要更新
+  const canvasDataEl = getCanvasDataRfEl(id)!;
+  const retreatSnapshot =  clone(canvasDataEl);
+
+  if(canvasDataEl?.editType.isAdd) {
+    removeCanvasDataRfEl(id);
+    retreatAndAdvance.value.addLog({
+      type: 'remove',
+      retreatSnapshot,
+    })
+  } else {
+    canvasDataEl.editType.isRemove = true;
+    retreatAndAdvance.value.addLog({
+      type: 'remove',
+      retreatSnapshot,
+      advanceSnapshot: clone(canvasDataEl),
+    })
   }
 }
 
 /**
  * @description: 粘贴元素
  */
-function pasteElement(canvas: Canvas, lastMouseEvent: MouseEvent) {
-  if(copySource.value?.name === 'imgBox') {
-    const newElement = imgToDataItem(copySource.value);
-    newElement.id = uuidv4();
+function pasteElHandle(canvas: Canvas, lastMouseEvent: MouseEvent) {
+  if(!copySource.value) return;
+
+  const canvasDataEl = copySource.value;
+  let newEl:  undefined | ImgDataItem | LineDataItem | TextDataItem;
+
+  if(canvasDataEl.type === 'imgData') {
+    newEl = clone(canvasDataEl);
+    newEl.id = uuidv4();
 
     const point = client2Canvas(canvas, [lastMouseEvent.clientX ?? 0, lastMouseEvent.clientY ?? 0])
-    newElement.coord = [point.x, point.y];
-    
-    createImgEntity(canvas, newElement)
-  } else if(copySource.value?.name === 'line') {
-    const newElement = lineToDataItem(copySource.value);
-    newElement.id = uuidv4();
+    newEl.coord = [point.x, point.y];
+  } else if(canvasDataEl.type === 'lineData') {
+    newEl = clone(canvasDataEl);
+    newEl.id = uuidv4();
 
     const point = client2Canvas(canvas, [lastMouseEvent.clientX ?? 0, lastMouseEvent.clientY ?? 0])
-    const originBeginPoint = newElement.coord[0];
+    const originBeginPoint = newEl.coord[0];
     const offset = [point.x - originBeginPoint[0], point.y - originBeginPoint[1]];
-    newElement.coord = newElement.coord.map( item => [item[0] + offset[0], item[1] + offset[1]])
-    
-    createLine(canvas, newElement)
-  } else if(copySource.value?.name === 'textBox') {
-    const newElement = textToDataItem(copySource.value);
-    newElement.id = uuidv4();
+    newEl.coord = newEl.coord.map( item => [item[0] + offset[0], item[1] + offset[1]])
+  } else if(canvasDataEl.type === 'textData') {
+    newEl = clone(canvasDataEl);
+    newEl.id = uuidv4();
 
     const point = client2Canvas(canvas, [lastMouseEvent.clientX ?? 0, lastMouseEvent.clientY ?? 0])
-    newElement.coord = [point.x, point.y];
-    
-    createText(canvas, newElement)
+    newEl.coord = [point.x, point.y];
   }
+
+  if(newEl) {
+    createRealEl(canvas, newEl);
+    addCanvasDataRfEl(newEl);
+    retreatAndAdvance.value.addLog({
+      type: 'add',
+      advanceSnapshot: clone(newEl),
+    })
+  }
+}
+
+/**
+ * @description: 新建元素
+ */
+function createRealEl(canvas: Canvas, item: ImgDataItem | LineDataItem | TextDataItem) {
+  if(item.type === 'imgData') createImgReal(canvas, item);
+  else if(item.type === 'lineData') createLineReal(canvas, item);
+  else if(item.type === 'textData') createTextReal(canvas, item);
 }
 
 export {
@@ -1169,34 +1345,36 @@ export {
   // 求一个点伸出的两条线的夹角(带正负)
   getAngleOfThreePoint,
 
+  // 这一块仅操作画布数据
+  // 新增元素
+  createRealEl,
   // 删除元素
-  deleteElement,
-  // 拖拽元件过来新增
-  imgDropHandle,
+  delateRealEl,
+  // 面板元件拖拽过来新增
+  canvasOutBoxDropHandle,
   // 新建一个img元素
-  createImgEntity,
+  createImgReal,
   // 绘制管道
-  drawLine,
+  drawLineReal,
   // 新增管道
-  createLine,
+  createLineReal,
   // 添加文字
-  createText,
+  createTextReal,
   
-  // img元素转外部数据
-  imgToDataItem,
-  // 管道元素转为外部数据
-  lineToDataItem,
-  // 文本元素转为外部数据
-  textToDataItem,
+  // 这一块同时操作画布数据和映射数据
+  // 根据画布数据更新映射
+  updateCanvasDataRfElByReal,
   // 调整元素zIndex
-  updateZIndex,
+  updateZIndexHandle,
   // 粘贴元素
-  pasteElement,
+  pasteElHandle,
+  // 删除元素
+  removeElHandle,
 
   // 给元素添加右键菜单
   customContextMenu,
-  // 给图片元素添加鼠标移入高亮
-  addEmphaticToImgGroupWhenHover,
+  // 给元素添加点击选中效果
+  addClickChooseForReal,
   // 给图片元素添加拖拽
   addDragToImgGroup,
   // 给元素添加旋转功能
@@ -1204,5 +1382,5 @@ export {
   // 给元素添加缩放功能
   addScaleToEntity,
   // 数据转文本
-  getDataOptionText,
+  getDataOptionText
 }

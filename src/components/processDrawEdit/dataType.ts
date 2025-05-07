@@ -2,7 +2,7 @@
  * @Author: Strayer
  * @Date: 2025-04-23
  * @LastEditors: Strayer
- * @LastEditTime: 2025-04-25
+ * @LastEditTime: 2025-05-07
  * @Description: 
  * @FilePath: \processDraw\src\components\processDrawEdit\dataType.ts
  */
@@ -62,29 +62,54 @@ export type PanelImgType = {
   colorPredefine?: string [];
   stroke: string,
   strokePredefine?: string [];
+
+  // 远控点
+  isRemotePoint?: boolean // 是否远控点
 }
 
 // 图片元件数据
 export type ImgDataItem = {
   id: string,
+  type: 'imgData',
   zIndex?: number,
+  editType: {
+    isAdd?: boolean;
+    isRemove?: boolean;
+    isUpdate?: boolean;
+  },
+
   key: string,
   width: number,
   height: number,
   coord: [number, number],
   rotate?: number,
 
+  // path
   color?: string,
   stroke?: string,
   scale?: number,
+
+  // 远控点
+  name?: string,
+  isRemotePoint?: boolean // 是否远控点
+  controlGetKey?: string  // 读取数据和设置数据不在同一个接口
+  controlSetKey?: string 
+  controlType?: number // 1 是阀-开度  2 是泵-频率
 }
 
 // 管道数据
-export type lineDataItem = {
+export type LineDataItem = {
   id: string;
+  type: 'lineData',
+  zIndex?: number,
+  editType: {
+    isAdd?: boolean;
+    isRemove?: boolean;
+    isUpdate?: boolean;
+  },
+
   angle90?: boolean;
   coord:  [number, number][];
-  zIndex?: number,
 
   style: {
     stroke: string;
@@ -100,9 +125,15 @@ export type lineDataItem = {
 // 文本数据
 export type TextDataItem = {
   id: string;
-  coord: [number, number];
+  type: 'textData',
   zIndex?: number,
+  editType: {
+    isAdd?: boolean;
+    isRemove?: boolean;
+    isUpdate?: boolean;
+  },
 
+  coord: [number, number];
   box: {
       width: number;
       height: number;
@@ -115,8 +146,8 @@ export type TextDataItem = {
       text: string;
       fontSize: number;
       fill: string;
-      fontWeight: number | "normal" | "bold" | "bolder" | "lighter" | undefined;
-      textAlign: "middle" | "start" | "center" | "end" | "left" | "right" | undefined;
+      fontWeight: number | 'normal' | 'bold' | 'bolder' | 'lighter' | undefined;
+      textAlign: 'middle' | 'start' | 'center' | 'end' | 'left' | 'right' | undefined;
       lineHeight: number;
       letterSpacing: number;
       dx: number;
@@ -132,4 +163,13 @@ export type TextDataItem = {
     equation?: string; // 单位转换的公式
     decimal?: number; // 保留的小数位
   }>
+}
+
+// 撤回与前进的数据类型
+export type RetreatAndAdvanceItem = {
+  type: 'add' | 'remove' | 'update';
+  // 操作前的对象 - 撤回用  // 新增的话这里为空
+  retreatSnapshot?: ImgDataItem | LineDataItem | TextDataItem;
+  // 操作后的对象 - 前进用  // 新增后的删除这里为空
+  advanceSnapshot?: ImgDataItem | LineDataItem | TextDataItem;
 }

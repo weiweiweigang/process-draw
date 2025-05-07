@@ -1,7 +1,8 @@
-import type { Canvas, DisplayObject } from "@antv/g";
-import type { MenuDataItem } from "./dataType";
-import { chooseDevice, copySource } from "./data";
-import { createImgEntity, deleteElement, imgToDataItem, updateZIndex } from "./comm";
+import type { Canvas, DisplayObject } from '@antv/g';
+import type { MenuDataItem } from './dataType';
+import { copySource, getCanvasDataRfEl } from './data';
+import { removeElHandle, updateZIndexHandle } from './comm';
+
 
 /**
  * @description: img元件右键菜单数据
@@ -23,7 +24,7 @@ export function getImgContextMenuData(canvas: Canvas, el: DisplayObject) {
       icon: '📋',
       clickParam: el.id,
       clickHandle: (id: string) => {
-        copySource.value = canvas.document.querySelector(`#${id}`) as DisplayObject;
+        copySource.value = getCanvasDataRfEl(id)!;
       },
     },
     {
@@ -32,7 +33,7 @@ export function getImgContextMenuData(canvas: Canvas, el: DisplayObject) {
       icon: '🗑️',
       clickParam: el.id,
       clickHandle: (id: string) => {
-        deleteElement(canvas, id);
+        removeElHandle(canvas, id);
       },
     },
     {
@@ -41,7 +42,7 @@ export function getImgContextMenuData(canvas: Canvas, el: DisplayObject) {
       icon: '⬆️',
       clickParam: el.id,
       clickHandle: (id: string) => {
-        updateZIndex(canvas, id, 999);
+        updateZIndexHandle(canvas, id, 999);
       },
     },
     {
@@ -50,7 +51,7 @@ export function getImgContextMenuData(canvas: Canvas, el: DisplayObject) {
       icon: '⬇️',
       clickParam: el.id,
       clickHandle: (id: string) => {
-        updateZIndex(canvas, id, 1);
+        updateZIndexHandle(canvas, id, 1);
       },
     },
   ];
@@ -69,7 +70,7 @@ export function getLineContextMenuData(canvas: Canvas, el: DisplayObject) {
       icon: '📋',
       clickParam: el.id,
       clickHandle: (id: string) => {
-        copySource.value = canvas.document.querySelector(`#${id}`) as DisplayObject;
+        copySource.value = getCanvasDataRfEl(id)!;
       },
     },
     {
@@ -78,7 +79,7 @@ export function getLineContextMenuData(canvas: Canvas, el: DisplayObject) {
       icon: '🗑️',
       clickParam: el.id,
       clickHandle: (id: string) => {
-        deleteElement(canvas, id);
+        removeElHandle(canvas, id);
       },
     },
     {
@@ -87,7 +88,7 @@ export function getLineContextMenuData(canvas: Canvas, el: DisplayObject) {
       icon: '⬆️',
       clickParam: el.id,
       clickHandle: (id: string) => {
-        updateZIndex(canvas, id, 999);
+        updateZIndexHandle(canvas, id, 999);
       },
     },
     {
@@ -96,7 +97,7 @@ export function getLineContextMenuData(canvas: Canvas, el: DisplayObject) {
       icon: '⬇️',
       clickParam: el.id,
       clickHandle: (id: string) => {
-        updateZIndex(canvas, id, 1);
+        updateZIndexHandle(canvas, id, 1);
       },
     },
   ];
@@ -114,7 +115,7 @@ export function getTextContextMenuData(canvas: Canvas, el: DisplayObject) {
       icon: '📋',
       clickParam: el.id,
       clickHandle: (id: string) => {
-        copySource.value = canvas.document.querySelector(`#${id}`) as DisplayObject;
+        copySource.value = getCanvasDataRfEl(id)!;
       },
     },
     {
@@ -123,7 +124,7 @@ export function getTextContextMenuData(canvas: Canvas, el: DisplayObject) {
       icon: '🗑️',
       clickParam: el.id,
       clickHandle: (id: string) => {
-        deleteElement(canvas, id);
+        removeElHandle(canvas, id);
       },
     },
     {
@@ -132,7 +133,7 @@ export function getTextContextMenuData(canvas: Canvas, el: DisplayObject) {
       icon: '⬆️',
       clickParam: el.id,
       clickHandle: (id: string) => {
-        updateZIndex(canvas, id, 999);
+        updateZIndexHandle(canvas, id, 999);
       },
     },
     {
@@ -141,7 +142,7 @@ export function getTextContextMenuData(canvas: Canvas, el: DisplayObject) {
       icon: '⬇️',
       clickParam: el.id,
       clickHandle: (id: string) => {
-        updateZIndex(canvas, id, 1);
+        updateZIndexHandle(canvas, id, 1);
       },
     },
   ];

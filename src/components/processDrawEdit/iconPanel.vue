@@ -2,55 +2,86 @@
  * @Author: Strayer
  * @Date: 2025-04-15
  * @LastEditors: Strayer
- * @LastEditTime: 2025-04-25
+ * @LastEditTime: 2025-05-07
  * @Description: 元件icon面板
  * @FilePath: \processDraw\src\components\processDrawEdit\iconPanel.vue
 -->
 
 <template>
-  <div class="iconPanel">
+  <div class="iconPanel el-message-box">
     <div class="iconPanel__header">
       <div class="iconPanel__title-row">
         <div class="iconPanel__title-with-help">
-          <h3 class="iconPanel__title">元件库</h3>
-          <button @click="showHelpDialog" class="iconPanel__button iconPanel__button--help">
+          <h3 class="iconPanel__title">
+            元件库
+          </h3>
+          <el-button
+            class="iconPanel__button iconPanel__button--help"
+            size="small"
+            @click="showHelpDialog"
+          >
             <i class="help-icon">?</i>
-          </button>
+          </el-button>
         </div>
         <div class="iconPanel__title-buttons">
-          <button @click="emit('submitDrawing')" class="iconPanel__button iconPanel__button--primary">
+          <el-button
+            type="primary"
+            size="small"
+            @click="emit('submitDrawing')"
+          >
             提交
-          </button>
-          <button @click="clearCanvas" class="iconPanel__button iconPanel__button--danger">
+          </el-button>
+          <el-button
+            type="danger"
+            size="small"
+            @click="clearCanvas"
+          >
             清空画布
-          </button>
-          <button @click="togglePanel" class="iconPanel__toggle">
+          </el-button>
+          <el-button
+            size="small"
+            @click="togglePanel"
+          >
             {{ isPanelCollapsed ? '展开' : '收起' }}
-          </button>
+          </el-button>
         </div>
       </div>
       <div class="iconPanel__tools">
-        <button v-if="currentDrawLineType" @click="currentDrawLineType = 0" class="iconPanel__button">
+        <el-button
+          v-if="currentDrawLineType"
+          size="small"
+          @click="currentDrawLineType = 0"
+        >
           取消画线
-        </button>
+        </el-button>
         <template v-else>
-          <button @click="currentDrawLineType = 1" class="iconPanel__button">
+          <el-button
+            size="small"
+            @click="currentDrawLineType = 1"
+          >
             画直角实线
-          </button>
-          <button @click="currentDrawLineType = 2" class="iconPanel__button">
+          </el-button>
+          <el-button
+            size="small"
+            @click="currentDrawLineType = 2"
+          >
             画直角虚线
-          </button>
-          <button @click="currentDrawLineType = 3" class="iconPanel__button">
+          </el-button>
+          <el-button
+            size="small"
+            @click="currentDrawLineType = 3"
+          >
             画任意虚线
-          </button>
-          <button @click="clearCanvas" class="iconPanel__button">
-            清空画布
-          </button>
+          </el-button>
         </template>
       </div>
     </div>
     
-    <div v-show="!isPanelCollapsed" class="iconPanel__content">
+    <div
+      v-show="!isPanelCollapsed"
+      class="iconPanel__content"
+    >
+      <!-- 一般文字 -->
       <div
         class="iconItem"
         draggable="true"
@@ -59,9 +90,11 @@
         <div class="iconItem__image">
           <p>文本内容</p>
         </div>
-        <p class="iconItem__label">文字</p>
+        <p class="iconItem__label">
+          文字
+        </p>
       </div>
-
+      <!-- 数据框 -->
       <div
         class="iconItem"
         draggable="true"
@@ -70,9 +103,11 @@
         <div class="iconItem__image">
           <p>数据框</p>
         </div>
-        <p class="iconItem__label">数据框</p>
+        <p class="iconItem__label">
+          数据框
+        </p>
       </div>
-      
+      <!-- 元件 -->
       <div 
         v-for="item in panelData" 
         :key="item.key"
@@ -91,25 +126,50 @@
             xmlns="http://www.w3.org/2000/svg" 
             xmlns:xlink="http://www.w3.org/1999/xlink"
           >
-            <path :fill="item.color ?? '#54BECC'" :stroke="item.stroke ?? 'none'" :d="item.path" />
+            <path
+              :fill="item.color ?? '#54BECC'"
+              :stroke="item.stroke ?? 'none'"
+              :d="item.path"
+            />
           </svg>
-          <img v-else :src="`${item.img}`" :width="item.width>100? 100:item.width" />
+          <img
+            v-else
+            :src="`${item.img}`"
+            :width="item.width>100? 100:item.width"
+          >
         </div>
-        <p class="iconItem__label">{{ item.label }}</p>
+        <p class="iconItem__label">
+          {{ item.label }}
+        </p>
       </div>
     </div>
     
     <!-- 帮助弹窗 -->
-    <div v-if="isHelpDialogVisible" class="help-dialog-overlay" @click="closeHelpDialog">
-      <div class="help-dialog" @click.stop>
+    <div
+      v-if="isHelpDialogVisible"
+      class="help-dialog-overlay"
+      @click="closeHelpDialog"
+    >
+      <div
+        class="help-dialog"
+        @click.stop
+      >
         <div class="help-dialog__header">
           <h3>操作说明</h3>
-          <button class="help-dialog__close" @click="closeHelpDialog">×</button>
+          <button
+            class="help-dialog__close"
+            @click="closeHelpDialog"
+          >
+            ×
+          </button>
         </div>
         <div class="help-dialog__content">
           <ul class="help-dialog__list">
-            <li v-for="(item, index) in helpData" :key="index">
-              <strong>{{ index + 1}}. {{ item.title }}：</strong>{{ item.text }}
+            <li
+              v-for="(item, index) in helpData"
+              :key="index"
+            >
+              <strong>{{ index + 1 }}. {{ item.title }}：</strong>{{ item.text }}
             </li>
           </ul>
         </div>
@@ -120,8 +180,8 @@
 
 <script setup lang="ts">
 import { shallowRef, ref, watch } from 'vue';
-import { panelData } from './data';
-import { client2Canvas, drawLine } from './comm';
+import { canvasDataRef, panelData } from './data';
+import { client2Canvas, drawLineReal, removeElHandle } from './comm';
 import { Canvas } from '@antv/g';
 
 const props = defineProps<{
@@ -184,7 +244,11 @@ const helpData = shallowRef([
   {
     title: '删除画布上所有元素',
     text: '在元件库面板上点击清空画布按钮'
-  }
+  },
+  {
+    title: '前进后退',
+    text: 'ctrl+z 撤回；ctrl+y 重做'
+  },
 ])
 
 const isPanelCollapsed = ref(false);
@@ -210,6 +274,11 @@ function dragstart(event: any, item: any) {
  * @description: 清空画布
  */
 function  clearCanvas() {
+  for(const item of [...canvasDataRef.value.imgData, ...canvasDataRef.value.lineData, ...canvasDataRef.value.textData]) {
+    if(item.editType.isRemove)  continue;
+
+    removeElHandle(props.canvas!, item.id);
+  }
   props.canvas?.destroyChildren();
 }
 
@@ -218,20 +287,23 @@ const currentDrawLineType = ref(0) // 0 不画线 1 画直角实线 2 画直角�
 
 watch(() => props.canvas, (val) => {
   if(val) {
+    let perTapTime = new Date();
     val.addEventListener('click', (event: MouseEvent) => {
-      // 双击
-      if(event.detail === 2 && currentDrawLineType.value) {
+      // 两次点击的时间少于300ms判断为双击
+      const nowTapTime = new Date();
+      if(nowTapTime.getTime() - perTapTime.getTime() < 300) {
         // 计算坐标
         const point = client2Canvas(props.canvas!, [event.clientX, event.clientY])
 
         if(currentDrawLineType.value === 1) {
-          drawLine(props.canvas!, { coord: [[point.x, point.y]], angle90: true })
+          drawLineReal(props.canvas!, { coord: [[point.x, point.y]], angle90: true })
         } else if(currentDrawLineType.value === 2) {
-          drawLine(props.canvas!, { coord: [[point.x, point.y]], style: { lineDash: [4, 4] }, angle90: true})
+          drawLineReal(props.canvas!, { coord: [[point.x, point.y]], style: { lineDash: [4, 4] }, angle90: true })
         } else if(currentDrawLineType.value === 3) {
-          drawLine(props.canvas!, { coord: [[point.x, point.y]], style: { lineDash: [4, 4] } })
+          drawLineReal(props.canvas!, { coord: [[point.x, point.y]], style: { lineDash: [4, 4] } })
         }
       }
+      perTapTime = nowTapTime;
     })
   }
 }, { immediate: true })
@@ -243,12 +315,22 @@ watch(() => props.canvas, (val) => {
   position: absolute;
   top: 10px;
   left: 10px;
-  background-color: #ffffff;
+
+  /* background-color: var(--el-bg-color-overlay); */
+  background-color: #fff;
+
+  /* border: 1px solid var(--el-color-primary); */
   border-radius: 8px;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
-  width: 380px;
+  width: 420px;
   overflow: hidden;
   transition: all 0.3s ease;
+  color: #333;
+  max-height: 80%;
+
+  /* [data-theme="black"] & {
+    color: #fff;
+  } */
 }
 
 .iconPanel__header {
@@ -281,21 +363,6 @@ watch(() => props.canvas, (val) => {
   font-weight: 600;
 }
 
-/* 帮助按钮样式调整 */
-.iconPanel__button--help {
-  background-color: #67c23a;
-  color: white;
-  border-color: #67c23a;
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-  font-size: 10px;
-}
-
 .iconPanel__title-buttons {
   display: flex;
   gap: 8px;
@@ -306,44 +373,6 @@ watch(() => props.canvas, (val) => {
   gap: 8px;
   flex-wrap: wrap;
   justify-content: flex-start;
-}
-
-/* 通用按钮样式 */
-.iconPanel__button {
-  background-color: #f2f6fc;
-  color: #606266;
-  border: 1px solid #dcdfe6;
-  border-radius: 4px;
-  padding: 4px 8px;
-  font-size: 12px;
-  cursor: pointer;
-  transition: all 0.3s;
-}
-
-.iconPanel__button:hover {
-  background-color: #ecf5ff;
-  color: #409eff;
-}
-
-/* 主要按钮样式 */
-.iconPanel__button--primary {
-  background-color: #409eff;
-  color: white;
-  border-color: #409eff;
-}
-
-.iconPanel__button--primary:hover {
-  background-color: #66b1ff;
-  color: white;
-}
-.iconPanel__button--danger {
-  background-color: #f56c6c;
-  color: white;
-  border-color: #f56c6c;
-}
-.iconPanel__button--danger:hover {
-  background-color: #f78989;
-  color: white;
 }
 
 .iconPanel__toggle {
@@ -381,6 +410,8 @@ watch(() => props.canvas, (val) => {
   border-radius: 6px;
   cursor: move;
   transition: all 0.2s ease;
+
+  /* background-color: var(--page-background); */
   background-color: #f5f7fa;
   overflow: hidden; /* 添加溢出隐藏 */
 }
@@ -416,44 +447,6 @@ watch(() => props.canvas, (val) => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-/* 自定义滚动条样式 */
-.iconPanel__content::-webkit-scrollbar {
-  width: 6px;
-}
-
-.iconPanel__content::-webkit-scrollbar-track {
-  background: #f1f1f1;
-  border-radius: 3px;
-}
-
-.iconPanel__content::-webkit-scrollbar-thumb {
-  background: #c0c4cc;
-  border-radius: 3px;
-}
-
-.iconPanel__content::-webkit-scrollbar-thumb:hover {
-  background: #909399;
-}
-
-/* 帮助按钮样式 */
-.iconPanel__button--help {
-  background-color: #67c23a;
-  color: white;
-  border-color: #67c23a;
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-}
-
-.iconPanel__button--help:hover {
-  background-color: #85ce61;
-  color: white;
 }
 
 .help-icon {

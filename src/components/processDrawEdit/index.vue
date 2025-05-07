@@ -2,70 +2,91 @@
  * @Author: Strayer
  * @Date: 2025-04-15
  * @LastEditors: Strayer
- * @LastEditTime: 2025-04-25
+ * @LastEditTime: 2025-05-07
  * @Description: 
  * @FilePath: \processDraw\src\components\processDrawEdit\index.vue
 -->
 
 <template>
-  <div class="demo">
+  <div class="processDrawEdit">
     <div 
-      :ondrop="(e: any) => imgDropHandle(canvas!, e)" 
+      :ondrop="(e: any) => canvasOutBoxDropHandle(canvas!, e)" 
       :ondragover="(e: any) => e.preventDefault()" 
-      style="border: 1px solid #ff0; width: 100%; height: 100%;"
+      style="
+          width: 100%;
+          height: 100%;"
     >
       <canvas
         id="container"
         style="
           width: 100%;
-          height: 100%;"
+          height: calc(100% - 12px);"
       />
     </div>
     <!-- 元件面板 -->
-    <IconPanel :canvas="canvas" @submitDrawing="submitDrawing" />
+    <IconPanel
+      v-if="!disableEdit"
+      :canvas="canvas"
+      @submitDrawing="submitDrawing"
+    />
     <!-- 属性面板 -->
-    <Attr />
+    <Attr 
+      v-if="!disableEdit" 
+      :canvas="canvas"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
 import { Renderer } from '@antv/g-canvas';
-import { Canvas, DisplayObject } from '@antv/g';
+import { Canvas } from '@antv/g';
 import { onMounted, shallowRef, watch, onBeforeUnmount } from 'vue';
-import { createImgEntity, imgDropHandle,addWheel, moveCamera, createLine, createText, deleteElement, imgToDataItem, lineToDataItem, textToDataItem, client2Canvas, pasteElement } from './comm';
+import { createImgReal, canvasOutBoxDropHandle, addWheel, moveCamera, createLineReal, createTextReal, removeElHandle, pasteElHandle } from './comm';
 import Attr from './attr.vue'
-import {type ImgDataItem, type lineDataItem, type PanelImgType, type TextDataItem } from './dataType';
-import { v4 as uuidv4 } from 'uuid';
+import { type ImgDataItem, type LineDataItem, type PanelImgType, type TextDataItem } from './dataType';
 
 import IconPanel  from './iconPanel.vue';
-import { chooseDevice, copySource, initData, panelData, serverData } from './data';
+import { canvasDataRef, chooseDevice, copySource, disableEdit, emitRef, initData, isCreateLine, panelData, retreatAndAdvance, serverData, updateDisableEdit } from './data';
+import { clone } from 'remeda';
 
 (window as any).__g_instances__ = [];
 
 const props = defineProps<{
   canvasData: {
     imgData: ImgDataItem [];
-    lineData: lineDataItem [];
+    lineData: LineDataItem [];
     textData: TextDataItem [];
   },
+  camera?: {
+    zoom: number;
+    position: [number,  number, number];
+  },
   deviceData: PanelImgType [];
-  dataBoxData?: {[key: string]: any}
+  dataBoxData?: {[key: string]: any};
+  disable?: boolean; // 是否禁止编辑
 }>();
 
 const emit = defineEmits<{
   (e: 'submit', value: {
-    imgData: ImgDataItem [];
-    lineData: lineDataItem [];
-    textData: TextDataItem [];
+    canvasData: {
+      imgData: ImgDataItem [];
+      lineData: LineDataItem [];
+      textData: TextDataItem [];
+    },
+    camera: {
+      zoom: number;
+      position: [number,  number, number];
+    }
   }): void;
+  (e: 'deviceClick', value: {device: ImgDataItem, event: MouseEvent}): void;
 }>();
 
-
+emitRef.value = emit
 
 onMounted(() => {
   initData();
   initCanvas();
-
+  
   // 键盘按下事件
   document.addEventListener('keydown', keyDownHandle);
   // 鼠标移动事件
@@ -78,9 +99,12 @@ onBeforeUnmount(() => {
   document.removeEventListener('mousemove', mouseMoveHandle);
 })
 
+watch(() => props.disable, (val) => {
+  updateDisableEdit(val ?? false);
+}, { immediate: true });
 watch(() => props.deviceData, (val) => {
   panelData.value = val;
-}, { immediate: true  });
+}, { immediate: true  })
 watch(() => props.dataBoxData, (val) => {
   serverData.value = val ?? {};
 }, { immediate: true  })
@@ -105,8 +129,16 @@ async function  initCanvas() {
 
   // 阻止默认的右键菜单
   canvas.value!.getContextService()!.getDomElement()!.addEventListener('contextmenu', (e) => {
-      e.preventDefault();
+    e.preventDefault();
   });
+
+  // 初始化画布等级和位置
+  watch(() => props.camera, () => {
+    if(props.camera) {
+      canvas.value?.getCamera().setPosition(props.camera.position);
+      canvas.value?.getCamera().setZoomByViewportPoint(props.camera.zoom, [canvas.value.getConfig().width! / 2, canvas.value.getConfig().height! / 2])
+    }
+  }, { immediate: true })
 
   // 使用鼠标滚轮实现相机缩放
   addWheel(canvas.value);
@@ -116,6 +148,12 @@ async function  initCanvas() {
 
   // 渲染数据
   watch(() => props.canvasData, () => {
+    canvasDataRef.value = {
+      imgData: props.canvasData.imgData.map(item => ({ ...clone(item), editType: {} })),
+      lineData: props.canvasData.lineData.map(item => ({ ...clone(item), editType: {} })),
+      textData: props.canvasData.textData.map(item => ({ ...clone(item), editType: {} })),
+    };
+    initData();
     canvas.value?.destroyChildren();
     renderData();
   }, { immediate: true })
@@ -125,14 +163,20 @@ async function  initCanvas() {
  * @description: 渲染外部数据
  */
 function  renderData() {
-  for(const item of props.canvasData.imgData) {
-    createImgEntity(canvas.value!, JSON.parse(JSON.stringify(item)))
+  for(const item of canvasDataRef.value.lineData) {
+    if(item.editType.isRemove) continue;
+
+    createLineReal(canvas.value!, JSON.parse(JSON.stringify(item)))
   }
-  for(const item of props.canvasData.lineData) {
-    createLine(canvas.value!, JSON.parse(JSON.stringify(item)))
+  for(const item of canvasDataRef.value.imgData) {
+    if(item.editType.isRemove) continue;
+
+    createImgReal(canvas.value!, JSON.parse(JSON.stringify(item)))
   }
-  for(const item of props.canvasData.textData) {
-    createText(canvas.value!, JSON.parse(JSON.stringify(item)))
+  for(const item of canvasDataRef.value.textData) {
+    if(item.editType.isRemove) continue;
+
+    createTextReal(canvas.value!, JSON.parse(JSON.stringify(item)))
   }
 }
 
@@ -141,17 +185,14 @@ function  renderData() {
  */
 function submitDrawing() {
   console.log('提交绘图');
-  const imgEntities = (canvas.value?.document.documentElement.children.filter(item => item.name === 'imgBox') as DisplayObject []) ?? [];
-  const lineEntities = (canvas.value?.document.documentElement.children.filter(item => item.name === 'line') as DisplayObject []) ?? [];
-  const textEntities = (canvas.value?.document.documentElement.children.filter(item => item.name === 'textBox') as DisplayObject []) ?? [];
 
-  const resData = {
-    imgData: imgEntities.map(item => imgToDataItem(item)),
-    lineData: lineEntities.map(item => lineToDataItem(item)),
-    textData: textEntities.map(item => textToDataItem(item)),
-  }
-
-  emit('submit', resData);
+  emit('submit', {
+    canvasData: canvasDataRef.value,
+    camera: {
+      zoom: canvas.value!.getCamera().getZoom(),
+      position: canvas.value!.getCamera().getPosition() as any,
+    }
+  });
 }
 
 /**
@@ -167,22 +208,28 @@ function mouseMoveHandle(event: MouseEvent) {
  * @description: 键盘按下事件
  */
 function  keyDownHandle(event: KeyboardEvent) {
-  // console.log('%c [ event ]-230', 'font-size:13px; background:#9897c7; color:#dcdbff;', event);
   if(event.code === 'Delete') {
     // 删除
-    if(['imgBox', 'line', 'textBox'].includes(chooseDevice.value?.name ?? '')) {
-      deleteElement(canvas.value!, chooseDevice.value?.id ?? '')
+    if(['imgData', 'lineData', 'textData'].includes(chooseDevice.value?.type ?? '')) {
+      removeElHandle(canvas.value!, chooseDevice.value?.id ?? '')
     }
   } else if(event.code === 'KeyC' && event.ctrlKey) {
     // 复制
     if(chooseDevice.value) copySource.value = chooseDevice.value;
   } else if(event.code === 'KeyV' && event.ctrlKey) {
     // 粘贴
-    pasteElement(canvas.value!, lastMouseEvent.value!)
-  } else if(event.code === 'KeyV' && event.ctrlKey) {
-    
+    pasteElHandle(canvas.value!, lastMouseEvent.value!)
+  } else if(event.code === 'KeyZ' && event.ctrlKey) {
+    // 撤回
+    if(isCreateLine.value) retreatAndAdvance.value.retreatCurrentLine();
+    else retreatAndAdvance.value.retreatOneStep(canvas.value!);
+  } else if(event.code === 'KeyY' && event.ctrlKey) {
+    // 前进
+    if(!isCreateLine.value) retreatAndAdvance.value.advanceOneStep(canvas.value!);
   }
 }
+
+defineExpose({ renderData, canvas })
 </script>
 
 <style>
@@ -196,6 +243,7 @@ function  keyDownHandle(event: KeyboardEvent) {
     font-family: 'Arial', sans-serif;
     font-size: 14px;
   }
+
   .context-menu__item {
     padding: 8px 12px;
     cursor: pointer;
@@ -204,13 +252,16 @@ function  keyDownHandle(event: KeyboardEvent) {
     color: #333;
     transition: background-color 0.2s;
   }
+
   .context-menu__item:hover {
     background-color: #f0f0f0;
   }
+
   .context-menu__icon {
     margin-right: 8px;
     font-style: normal;
   }
+
   .context-menu__divider {
     height: 1px;
     background-color: #e0e0e0;
@@ -220,11 +271,10 @@ function  keyDownHandle(event: KeyboardEvent) {
 </style>
 
 <style scoped>
-.demo {
+.processDrawEdit {
   position: relative;
-  margin: 0 auto;
-  width: 96vw;
-  height: 96vh;
+  width: 100%;
+  height: 100%;
 }
 </style>
 .
