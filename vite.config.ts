@@ -10,6 +10,7 @@ export default defineConfig({
     vue(),
     vueDevTools(),
   ],
+  base:'/process-draw/',
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url))
